@@ -1,5 +1,4 @@
 <?php
-// File: /api/join_trip.php
 session_start();
 
 // Debug
@@ -15,6 +14,7 @@ if (!isset($pdo)) {
 } else {
     error_log("PDO connection active. Server Info: " . $pdo->getAttribute(PDO::ATTR_SERVER_INFO));
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, false);
     $pdo->setAttribute(PDO::ATTR_TIMEOUT, 30);
     $pdo->beginTransaction();
@@ -29,14 +29,24 @@ if (!isset($_SESSION['user']['id'])) {
 $user_id = $_SESSION['user']['id'];
 error_log("User ID: " . $user_id);
 
+// Verify user exists
+$user_check_stmt = $pdo->prepare("SELECT 1 FROM users WHERE id = :user_id");
+$user_check_stmt->execute([':user_id' => $user_id]);
+if (!$user_check_stmt->fetch()) {
+    error_log("User $user_id not found in users table");
+    $pdo->rollBack();
+    header("Location: ../public/pages/dashboard.php?error=invalid_user");
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['trip_id']) && isset($_GET['type'])) {
-    $trip_id = (int)$_GET['trip_id']; // Cast to integer for safety
+    $trip_id = (int)$_GET['trip_id'];
     $trip_type = $_GET['type'];
 
     try {
         error_log("Processing join request for trip_id: $trip_id, type: $trip_type");
 
-        // Validate trip type (solo only)
+        // Validate trip type
         if ($trip_type !== 'solo') {
             error_log("Invalid trip type: $trip_type (solo only supported)");
             $pdo->rollBack();
@@ -44,20 +54,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['trip_id']) && isset($_G
             exit;
         }
 
-        // Check if the trip exists and user is not the creator
+        // Check trip existence and ownership
         $check_stmt = $pdo->prepare("
             SELECT 1 FROM solo_trips WHERE id = :trip_id AND created_by != :user_id
         ");
         $check_stmt->execute([':trip_id' => $trip_id, ':user_id' => $user_id]);
         if (!$check_stmt->fetch()) {
-            error_log("Trip $trip_id not found or created by user $user_id. Solo_trips data: " . print_r($pdo->query("SELECT id, created_by FROM solo_trips WHERE id = $trip_id")->fetch(), true));
+            error_log("Trip $trip_id not found or created by user $user_id. Solo_trips data: " . print_r($pdo->query("SELECT * FROM solo_trips WHERE id = $trip_id")->fetch(), true));
             $pdo->rollBack();
             header("Location: ../public/pages/dashboard.php?error=invalid_trip");
             exit;
         }
         error_log("Trip $trip_id validated");
 
-        // Lock and check if user already requested or joined
+        // Check for existing request with lock
         $check_membership_stmt = $pdo->prepare("
             SELECT * FROM trip_members WHERE trip_id = :trip_id AND user_id = :user_id AND status IN ('pending', 'approved') FOR UPDATE
         ");
@@ -70,16 +80,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['trip_id']) && isset($_G
         }
         error_log("No prior request found for user $user_id on trip $trip_id");
 
-        // Insert join request into trip_members
+        // Debug existing members
+        $existing_members_stmt = $pdo->prepare("SELECT * FROM trip_members WHERE trip_id = :trip_id");
+        $existing_members_stmt->execute([':trip_id' => $trip_id]);
+        error_log("Existing members for trip $trip_id: " . print_r($existing_members_stmt->fetchAll(), true));
+
+        // Insert join request
         $join_stmt = $pdo->prepare("
             INSERT INTO trip_members (trip_id, user_id, status, joined_at)
             VALUES (:trip_id, :user_id, 'pending', NOW())
         ");
-        error_log("Executing INSERT with trip_id: $trip_id, user_id: $user_id");
-        $join_stmt->execute([
-            ':trip_id' => $trip_id,
-            ':user_id' => $user_id
-        ]);
+        error_log("Executing INSERT with trip_id: $trip_id, user_id: $user_id, solo_trips check: " . print_r($pdo->query("SELECT * FROM solo_trips WHERE id = $trip_id")->fetch(), true));
+        $join_stmt->execute([':trip_id' => $trip_id, ':user_id' => $user_id]);
         error_log("Insert executed successfully for trip_id: $trip_id, user_id: $user_id");
 
         // Commit transaction
