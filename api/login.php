@@ -14,11 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user'] = [
             'id' => $user['id'],
             'name' => $user['name'],
-            'role' => $user['role']
+            'is_admin' => $user['is_admin'],
         ];
 
-        if ($user['role'] == 1) {
-            header("Location: ../admin/dashboard.php");
+        
+        if ($user['is_admin'] == 1) {
+            header("Location: ../admin/admin-dashboard.php");
         } else {
             header("Location: ../public/pages/dashboard.php");
         }
@@ -28,4 +29,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: ../public/pages/login.php");
     }
 }
+
 ?>

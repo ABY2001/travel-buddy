@@ -182,10 +182,10 @@ tbody tr:hover {
             <div class="success-message"><?= htmlspecialchars($_GET['msg']) ?></div>
         <?php endif; ?>
 
-        <div class="links">
+        <!-- <div class="links">
             <a href="/travel-buddy-main/index.php">Home</a>
             <a href="/travel-buddy-main/admin/create_trip_form.php">Add New Place</a>
-        </div>
+        </div> -->
 
         <table>
             <thead>

@@ -9,26 +9,27 @@ if (!isset($_SESSION['user']['id'])) {
 include '../../api/dashboard.php';
 
 $user_id = $_SESSION['user']['id'];
-$all_trips = fetchUserTrips($user_id); // Trips created by the user
+
+// Determine active section based on URL parameter or default to 'my-trips'
+$active_section = isset($_GET['section']) ? $_GET['section'] : 'my-trips';
+
+// Fetch all trips data
+$all_trips = fetchUserTrips($user_id);
 $joinable_trips = fetchJoinableTrips($user_id);
 $pending_requests = fetchPendingJoinRequests($user_id);
-$joined_trips = fetchJoinedTrips($user_id); // Trips the user has joined (including pending)
+$joined_trips = fetchJoinedTrips($user_id);
 
-if (isset($all_trips['error'])) {
-    $error_message = $all_trips['error'];
-    $all_trips = [];
-} elseif (isset($joinable_trips['error'])) {
-    $error_message = $joinable_trips['error'];
-    $joinable_trips = [];
-} elseif (isset($pending_requests['error'])) {
-    $error_message = $pending_requests['error'];
-    $pending_requests = [];
-} elseif (isset($joined_trips['error'])) {
-    $error_message = $joined_trips['error'];
-    $joined_trips = [];
-} else {
-    $error_message = '';
-}
+if (isset($all_trips['error'])) $error_message = $all_trips['error'];
+elseif (isset($joinable_trips['error'])) $error_message = $joinable_trips['error'];
+elseif (isset($pending_requests['error'])) $error_message = $pending_requests['error'];
+elseif (isset($joined_trips['error'])) $error_message = $joined_trips['error'];
+else $error_message = '';
+
+// Convert data to JSON for JavaScript
+$all_trips_json = json_encode($all_trips);
+$joinable_trips_json = json_encode($joinable_trips);
+$joined_trips_json = json_encode($joined_trips);
+$pending_requests_json = json_encode($pending_requests);
 
 include '../includes/navbar.php';
 ?>
@@ -40,17 +41,103 @@ include '../includes/navbar.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Travel Buddy</title>
     <link rel="stylesheet" href="../assets/dashboard.css">
+    <style>
+        /* Search Bar */
+        .search-bar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .search-bar input {
+            padding: 10px;
+            width: 300px;
+            border: 2px solid #ffcc00;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        .search-bar input:focus {
+            border-color: #ffaa00;
+        }
+        .search-bar input::placeholder {
+            color: #ccc;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .tab-nav a {
+            color: #ffcc00;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 2px solid #ffcc00;
+            border-radius: 8px;
+            transition: 0.3s ease-in-out;
+        }
+        .tab-nav a.active {
+            background: #ffcc00;
+            color: #333;
+        }
+        .tab-nav a:hover {
+            background: #ffaa00;
+            color: #000;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Dynamic Table Styles */
+        .dynamic-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .dynamic-table thead {
+            background: rgba(255, 204, 0, 0.15);
+        }
+        .dynamic-table thead th {
+            padding: 14px 10px;
+            text-transform: uppercase;
+            font-size: 14px;
+            color: #ffcc00;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .dynamic-table tbody td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 15px;
+        }
+        .dynamic-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h2>Welcome to Your Dashboard</h2>
+        <h2>Hello, <?php echo htmlspecialchars($_SESSION['user']['name'] ?? 'Traveler'); ?>! Explore Your Travel Buddy Journey</h2>
 
-        <!-- Display success message -->
-        <?php if (isset($_GET['success'])): ?>
-            <p class="success-message" id="successMessage"><?php echo htmlspecialchars("Request " . $_GET['success'] . " successfully!"); ?></p>
-        <?php endif; ?>
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search by location..." onkeyup="filterTables()">
+        </div>
 
-        <!-- Display error message -->
         <?php if ($error_message): ?>
             <p class="error-message"><?php echo htmlspecialchars($error_message); ?></p>
         <?php elseif (isset($_GET['error'])): ?>
@@ -69,176 +156,188 @@ include '../includes/navbar.php';
                 echo htmlspecialchars($error_messages[$error] ?? 'An unknown error occurred.');
                 ?>
             </p>
+        <?php elseif (isset($_GET['success'])): ?>
+            <p class="success-message" id="successMessage"><?php echo htmlspecialchars("Request " . $_GET['success'] . " successfully!"); ?></p>
         <?php endif; ?>
 
-        <!-- Navigation links -->
-        <div class="links">
-            <a href="create_trip.php">Create a Trip</a>
-            <a href="../../api/logout.php">Logout</a>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <a href="?section=my-trips" class="<?php echo $active_section === 'my-trips' ? 'active' : ''; ?>">My Trips</a>
+            <a href="?section=joined-trips" class="<?php echo $active_section === 'joined-trips' ? 'active' : ''; ?>">Joined Trips</a>
+            <a href="?section=joinable-trips" class="<?php echo $active_section === 'joinable-trips' ? 'active' : ''; ?>">Joinable Trips</a>
+            <a href="?section=pending-requests" class="<?php echo $active_section === 'pending-requests' ? 'active' : ''; ?>">Pending Requests</a>
         </div>
 
-        <!-- Your Trips Section -->
-        <h3>Your Trips</h3>
-        <?php if (count($all_trips) > 0): ?>
-            <table id="tripsTable">
-                <thead>
-                    <tr>
-                        <th data-sort="trip_type">Trip Type</th>
-                        <th data-sort="destination">Destination</th>
-                        <th data-sort="travel_date">Travel Date</th>
-                        <th data-sort="budget">Budget</th>
-                        <th data-sort="gender_preference">Gender Preference</th>
-                        <th data-sort="created_at">Created At</th>
-                        <th>Creator</th>
-                        <th>Members</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($all_trips as $trip): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($trip['trip_type']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['destination']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['travel_date']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['budget']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['gender_preference']); ?></td>
-                            <td><?php echo isset($trip['created_at']) ? htmlspecialchars($trip['created_at']) : 'N/A'; ?></td>
-                            <td>
-                                <span class="creator-tag">Creator: <?php echo htmlspecialchars($trip['creator_name']) . ' (' . htmlspecialchars($trip['creator_email']) . ')'; ?></span>
-                            </td>
-                            <td>
-                                <?php foreach ($trip['members'] as $member): ?>
-                                    <div>
-                                        <?php echo htmlspecialchars($member['name']) . ' (' . htmlspecialchars($member['email']) . ')'; ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <p>No trips found. Start by creating a new trip!</p>
-        <?php endif; ?>
-
-        <!-- Joined Trips Section -->
-        <h3>Your Joined Trips</h3>
-        <?php if (count($joined_trips) > 0): ?>
-            <table id="joinedTripsTable">
-                <thead>
-                    <tr>
-                        <th data-sort="trip_type">Trip Type</th>
-                        <th data-sort="destination">Destination</th>
-                        <th data-sort="travel_date">Travel Date</th>
-                        <th data-sort="budget">Budget</th>
-                        <th data-sort="gender_preference">Gender Preference</th>
-                        <th data-sort="created_at">Created At</th>
-                        <th>Creator</th>
-                        <th>Members</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($joined_trips as $trip): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($trip['trip_type']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['destination']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['travel_date']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['budget']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['gender_preference']); ?></td>
-                            <td><?php echo isset($trip['created_at']) ? htmlspecialchars($trip['created_at']) : 'N/A'; ?></td>
-                            <td>
-                                <span class="creator-tag">Creator: <?php echo htmlspecialchars($trip['creator_name']) . ' (' . htmlspecialchars($trip['creator_email']) . ')'; ?></span>
-                            </td>
-                            <td>
-                                <?php 
-                                $members = $trip['members'] ?? [];
-                                foreach ($members as $member): ?>
-                                    <div>
-                                        <?php echo htmlspecialchars($member['name'] ?? 'Unknown') . ' (' . htmlspecialchars($member['email'] ?? 'Unknown') . ')'; ?>
-                                    </div>
-                                <?php endforeach; 
-                                if (empty($members)) echo '<div>No members yet</div>';
-                                ?>
-                            </td>
-                            <td><?php echo htmlspecialchars($trip['status'] ?? 'Unknown'); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <p>No trips joined yet (pending or approved).</p>
-        <?php endif; ?>
-
-        <!-- Joinable Solo Trips Section -->
-        <h3>Joinable Solo Trips</h3>
-        <?php if (count($joinable_trips) > 0): ?>
-            <table id="joinableTripsTable">
-                <thead>
-                    <tr>
-                        <th>Trip Type</th>
-                        <th>Destination</th>
-                        <th>Travel Date</th>
-                        <th>Budget</th>
-                        <th>Gender Preference</th>
-                        <th>Created At</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($joinable_trips as $trip): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($trip['trip_type']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['destination']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['travel_date']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['budget']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['gender_preference']); ?></td>
-                            <td><?php echo htmlspecialchars($trip['created_at']); ?></td>
-                            <td>
-                                <a href="../../api/join_trip.php?trip_id=<?php echo $trip['id']; ?>&type=solo" class="join-btn">Join</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <p>No joinable solo trips available.</p>
-        <?php endif; ?>
-
-        <!-- Pending Join Requests Section -->
-        <h3>Pending Join Requests</h3>
-        <?php if (count($pending_requests) > 0): ?>
-            <table id="pendingRequestsTable">
-                <thead>
-                    <tr>
-                        <th>Trip Destination</th>
-                        <th>Travel Date</th>
-                        <th>Requester</th>
-                        <th>Requested At</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($pending_requests as $request): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($request['destination']); ?></td>
-                            <td><?php echo htmlspecialchars($request['travel_date']); ?></td>
-                            <td><?php echo htmlspecialchars($request['name']); ?></td>
-                            <td><?php echo htmlspecialchars($request['joined_at']); ?></td>
-                            <td>
-                                <a href="../../api/manage_join_request.php?request_id=<?php echo $request['request_id']; ?>&action=approve" class="join-btn">Approve</a>
-                                <a href="../../api/manage_join_request.php?request_id=<?php echo $request['request_id']; ?>&action=reject" class="join-btn" style="background-color: #ff4444;">Reject</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <p>No pending join requests.</p>
-        <?php endif; ?>
+        <!-- Tab Content with Dynamic Tables -->
+        <div class="tab-content <?php echo $active_section === 'my-trips' ? 'active' : ''; ?>" id="my-trips">
+            <table class="dynamic-table" id="myTripsTable"></table>
+        </div>
+        <div class="tab-content <?php echo $active_section === 'joined-trips' ? 'active' : ''; ?>" id="joined-trips">
+            <table class="dynamic-table" id="joinedTripsTable"></table>
+        </div>
+        <div class="tab-content <?php echo $active_section === 'joinable-trips' ? 'active' : ''; ?>" id="joinable-trips">
+            <table class="dynamic-table" id="joinableTripsTable"></table>
+        </div>
+        <div class="tab-content <?php echo $active_section === 'pending-requests' ? 'active' : ''; ?>" id="pending-requests">
+            <table class="dynamic-table" id="pendingRequestsTable"></table>
+        </div>
     </div>
 
     <script src="../js/dashboard.js"></script>
     <script>
+        // Parse JSON data from PHP
+        const allTrips = <?php echo $all_trips_json; ?> || [];
+        const joinableTrips = <?php echo $joinable_trips_json; ?> || [];
+        const joinedTrips = <?php echo $joined_trips_json; ?> || [];
+        const pendingRequests = <?php echo $pending_requests_json; ?> || [];
+
+        console.log('All Trips:', allTrips);
+        console.log('Joined Trips:', joinedTrips);
+        console.log('Joinable Trips:', joinableTrips);
+        console.log('Pending Requests:', pendingRequests);
+
+        // Function to populate tables
+        function populateTable(tableId, data, columnMapping) {
+            const table = document.getElementById(tableId);
+            table.innerHTML = ''; // Clear existing content
+
+            if (!data || data.length === 0) {
+                const tbody = document.createElement('tbody');
+                const row = document.createElement('tr');
+                const td = document.createElement('td');
+                td.setAttribute('colspan', Object.keys(columnMapping).length);
+                td.textContent = 'No trips found.';
+                td.style.textAlign = 'center';
+                row.appendChild(td);
+                tbody.appendChild(row);
+                table.appendChild(tbody);
+                return;
+            }
+
+            // Create header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            for (let header in columnMapping) {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            }
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create body
+            const tbody = document.createElement('tbody');
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                for (let header in columnMapping) {
+                    const td = document.createElement('td');
+                    const key = columnMapping[header];
+                    if (header === 'Members') {
+                        const membersDiv = document.createElement('div');
+                        if (item[key] && Array.isArray(item[key])) {
+                            item[key].forEach(member => {
+                                const memberDiv = document.createElement('div');
+                                memberDiv.textContent = `${member.name} (${member.email || 'No email'})`;
+                                membersDiv.appendChild(memberDiv);
+                            });
+                        }
+                        if (!item[key] || item[key].length === 0) {
+                            membersDiv.textContent = 'No members yet';
+                        }
+                        td.appendChild(membersDiv);
+                    } else if (header === 'Creator') {
+                        td.innerHTML = `<span class="creator-tag">Creator: ${item[key + '_name'] || 'Unknown'} (${item[key + '_email'] || 'No email'})</span>`;
+                    } else if (header === 'Action' && tableId === 'joinableTripsTable' && item.id) {
+                        td.innerHTML = `<a href="../../api/join_trip.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
+                    } else if (header === 'Action' && tableId === 'pendingRequestsTable' && item.request_id) {
+                        td.innerHTML = `
+                            <a href="../../api/manage_join_request.php?request_id=${item.request_id}&action=approve" class="join-btn">Approve</a>
+                            <a href="../../api/manage_join_request.php?request_id=${item.request_id}&action=reject" class="join-btn" style="background-color: #ff4444;">Reject</a>
+                        `;
+                    } else {
+                        td.textContent = item[key] !== undefined ? item[key] : 'N/A';
+                    }
+                    row.appendChild(td);
+                }
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+        }
+
+        // Column mappings (header: data key)
+        const myTripsColumns = {
+            'Trip Type': 'trip_type',
+            'Destination': 'destination',
+            'Travel Date': 'travel_date',
+            'Budget': 'budget',
+            'Gender Preference': 'gender_preference',
+            'Created At': 'created_at',
+            'Creator': 'creator',
+            'Members': 'members'
+        };
+        const joinedTripsColumns = {
+            'Trip Type': 'trip_type',
+            'Destination': 'destination',
+            'Travel Date': 'travel_date',
+            'Budget': 'budget',
+            'Gender Preference': 'gender_preference',
+            'Created At': 'created_at',
+            'Creator': 'creator',
+            'Members': 'members',
+            'Status': 'status'
+        };
+        const joinableTripsColumns = {
+            'Trip Type': 'trip_type',
+            'Destination': 'destination',
+            'Travel Date': 'travel_date',
+            'Budget': 'budget',
+            'Gender Preference': 'gender_preference',
+            'Created At': 'created_at',
+            'Action': 'id' // Using id for the join action
+        };
+        const pendingRequestsColumns = {
+            'Trip Destination': 'destination',
+            'Travel Date': 'travel_date',
+            'Requester': 'name', // Assuming requester name is available
+            'Requested At': 'joined_at',
+            'Action': 'request_id' // Using request_id for the action
+        };
+
+        // Initial population
+        populateTable('myTripsTable', allTrips, myTripsColumns);
+        populateTable('joinedTripsTable', joinedTrips, joinedTripsColumns);
+        populateTable('joinableTripsTable', joinableTrips, joinableTripsColumns);
+        populateTable('pendingRequestsTable', pendingRequests, pendingRequestsColumns);
+
+        // Frontend search function
+        function filterTables() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+
+            // Filter My Trips
+            let myTripsData = allTrips.filter(trip => 
+                trip.destination && trip.destination.toLowerCase().includes(searchInput)
+            );
+            populateTable('myTripsTable', myTripsData, myTripsColumns);
+
+            // Filter Joined Trips
+            let joinedTripsData = joinedTrips.filter(trip => 
+                trip.destination && trip.destination.toLowerCase().includes(searchInput)
+            );
+            populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
+
+            // Filter Joinable Trips
+            let joinableTripsData = joinableTrips.filter(trip => 
+                trip.destination && trip.destination.toLowerCase().includes(searchInput)
+            );
+            populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
+
+            // Filter Pending Requests
+            let pendingRequestsData = pendingRequests.filter(request => 
+                request.destination && request.destination.toLowerCase().includes(searchInput)
+            );
+            populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
+        }
+
         const successMessage = document.getElementById('successMessage');
         if (successMessage) {
             setTimeout(() => {

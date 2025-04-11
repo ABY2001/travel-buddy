@@ -6,8 +6,6 @@ A PHP & JavaScript-based web application that helps users find travel partners g
  Features
 - User Authentication (Register/Login)
 - Trip Management (Create/Edit/Delete trips)
-- Matching System (Find users with the same destination)
 - Connection Requests (Send & Accept travel partner requests)
-- Single Page Navigation (Dynamic page loading with JavaScript)
 
 ---
