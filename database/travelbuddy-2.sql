@@ -230,35 +230,6 @@ LOCK TABLES `users` WRITE;
 INSERT INTO `users` VALUES (3,'Athulya','athulya2002@gmail.com','$2y$12$JUbdYh/EVouBN62lGMd1a.pniBfugrjTwt6H6/9xp.lpVMhaV6I.W','2025-03-01 03:42:49','2002-03-06','7593324623',0),(4,'Aby','abyponnachan@gmail.com','$2y$12$jzjmh4xSSNrx2mavSl/ZteABDtke8095d3A72fByovPuBVAK3Brt6','2025-03-01 05:11:28','2001-05-21','7593042375',0),(5,'Anwar','anwar007@gmail.com','$2y$12$0zcW4igwpadOw.AB/QZXHOMXvq5Hbiiy/Sieg7Yo.34fyOzMrnUiK','2025-03-01 06:34:46','2003-06-10','7725238428',0),(6,'Archa','archa007@gmail.com','$2y$12$inuE4JGAz4p/R/E3kRy5n.cgujpj.bK3NU4/3EyJzwkakn5TMFJfK','2025-03-01 07:28:20','2003-06-09','4412445312',0),(7,'test','test123@gmail.com','$2y$12$YvGHfBe/8T0i79tpVpCbH.P65T.yBUH0qcbnT72wdvAV/aEaKeMoO','2025-03-09 13:16:44','2011-06-07','7593324623',0);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
-
-
-
-
---
--- Table structure for table `gender`
---
-
-DROP TABLE IF EXISTS `gender`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `gender` (
-  `user_id` int NOT NULL,
-  `gender` enum('male','female','other') NOT NULL,
-  PRIMARY KEY (`user_id`),
-  CONSTRAINT `gender_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `gender`
---
-
-LOCK TABLES `gender` WRITE;
-/*!40000 ALTER TABLE `gender` DISABLE KEYS */;
-/*!40000 ALTER TABLE `gender` ENABLE KEYS */;
-UNLOCK TABLES;
-
-
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
