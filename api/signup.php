@@ -10,8 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = isset($_POST['password']) ? password_hash($_POST['password'], PASSWORD_BCRYPT) : null;
     $age = htmlspecialchars($_POST['age'] ?? '');
     $phone_number = htmlspecialchars($_POST['phone_number'] ?? '');
-    $gender = htmlspecialchars($_POST['gender'] ?? ''); // ✅ Capture gender
-
+    
     $is_admin = isset($_POST['is_admin']) ? 1 : 0;
 
     if (!isset($pdo)) {
@@ -19,20 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        // Insert into users table
         $query = "INSERT INTO users (name, email, password, age, phone_number, is_admin) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($query);
         $stmt->execute([$name, $email, $password, $age, $phone_number, $is_admin]);
 
-        // ✅ Get inserted user ID
+        // Get the last inserted ID and set it in the session
         $user_id = $pdo->lastInsertId();
-
-        // ✅ Insert gender into separate table
-        $genderQuery = "INSERT INTO gender (user_id, gender) VALUES (?, ?)";
-        $genderStmt = $pdo->prepare($genderQuery);
-        $genderStmt->execute([$user_id, $gender]);
-
-        // Set session and redirect
         $_SESSION['user'] = [
             'id' => $user_id,
             'name' => $name,
@@ -41,9 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         if ($is_admin == 1) {
-            header("Location: ../admin/dashboard.php");
+            header("Location: ../admin/dashboard.php"); // Absolute path for admin
         } else {
-            header("Location: ../public/pages/dashboard.php");
+            header("Location: ../public/pages/dashboard.php"); // Absolute path for normal user
         }
         exit();
     } catch (PDOException $e) {
