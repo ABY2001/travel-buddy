@@ -59,6 +59,12 @@ include '../includes/navbar.php';
             outline: none;
             transition: border-color 0.3s ease;
         }
+
+        .search-bar input[type="date"] {
+        margin-left: 10px;
+        width: 200px;
+        }
+
         .search-bar input:focus {
             border-color: #ffaa00;
         }
@@ -136,6 +142,7 @@ include '../includes/navbar.php';
         <!-- Search Bar -->
         <div class="search-bar">
             <input type="text" id="searchInput" placeholder="Search by location..." onkeyup="filterTables()">
+            <input type="date" id="searchDate" onchange="filterTables()">
         </div>
 
         <?php if ($error_message): ?>
@@ -312,32 +319,36 @@ include '../includes/navbar.php';
 
         // Frontend search function
         function filterTables() {
-            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+        const locationInput = document.getElementById('searchInput').value.toLowerCase();
+        const dateInput = document.getElementById('searchDate').value;
 
-            // Filter My Trips
-            let myTripsData = allTrips.filter(trip => 
-                trip.destination && trip.destination.toLowerCase().includes(searchInput)
-            );
-            populateTable('myTripsTable', myTripsData, myTripsColumns);
+        const filterTrip = trip => {
+        const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
+        const dateMatch = !dateInput || trip.travel_date === dateInput;
+        return destinationMatch && dateMatch;
+    };
 
-            // Filter Joined Trips
-            let joinedTripsData = joinedTrips.filter(trip => 
-                trip.destination && trip.destination.toLowerCase().includes(searchInput)
-            );
-            populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
+    // Filter My Trips
+    let myTripsData = allTrips.filter(filterTrip);
+    populateTable('myTripsTable', myTripsData, myTripsColumns);
 
-            // Filter Joinable Trips
-            let joinableTripsData = joinableTrips.filter(trip => 
-                trip.destination && trip.destination.toLowerCase().includes(searchInput)
-            );
-            populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
+    // Filter Joined Trips
+    let joinedTripsData = joinedTrips.filter(filterTrip);
+    populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
-            // Filter Pending Requests
-            let pendingRequestsData = pendingRequests.filter(request => 
-                request.destination && request.destination.toLowerCase().includes(searchInput)
-            );
-            populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
-        }
+    // Filter Joinable Trips
+    let joinableTripsData = joinableTrips.filter(filterTrip);
+    populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
+
+    // Filter Pending Requests (assuming similar structure)
+    let pendingRequestsData = pendingRequests.filter(request => {
+        const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
+        const dateMatch = !dateInput || request.travel_date === dateInput;
+        return destinationMatch && dateMatch;
+    });
+    populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
+}
+
 
         const successMessage = document.getElementById('successMessage');
         if (successMessage) {
