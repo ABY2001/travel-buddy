@@ -287,7 +287,7 @@ include '../includes/navbar.php';
                     } else if (header === 'Action' && tableId === 'myTripsTable' && item.id) {
                         td.innerHTML = `<a href="../../api/delete_trip_user.php?trip_id=${item.id}" class="join-btn" onclick="return confirm('Are you sure you want to delete this trip?')">Delete</a>`;
                     } else if (header === 'Action' && tableId === 'joinableTripsTable' && item.id) {
-                        td.innerHTML = `<a href="../../api/delete_trip_user.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
+                        td.innerHTML = `<a href="../../api/join_trip.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
                     } else if (header === 'Action' && tableId === 'pendingRequestsTable' && item.request_id) {
                         td.innerHTML = `
                             <a href="../../api/manage_join_request.php?request_id=${item.request_id}&action=approve" class="join-btn">Approve</a>
