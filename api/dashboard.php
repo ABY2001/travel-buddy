@@ -33,6 +33,11 @@ function fetchUserTrips($user_id) {
 function fetchJoinableTrips($user_id) {
     global $pdo;
     try {
+        $user_stmt = $pdo->prepare("SELECT gender FROM users WHERE id = :user_id");
+        $user_stmt->execute([':user_id' => $user_id]);
+        $user = $user_stmt->fetch();
+        $user_gender = $user['gender'];
+
         $stmt = $pdo->prepare("
             SELECT st.*, 'solo' as trip_type
             FROM solo_trips st
@@ -40,8 +45,9 @@ function fetchJoinableTrips($user_id) {
             AND st.id NOT IN (
                 SELECT trip_id FROM trip_members WHERE user_id = :user_id AND status IN ('pending', 'approved')
             )
+            AND (st.gender_preference = 'any' OR st.gender_preference = :user_gender)
         ");
-        $stmt->execute([':user_id' => $user_id]);
+        $stmt->execute([':user_id' => $user_id, ':user_gender' => $user_gender]);
         $joinable_trips = $stmt->fetchAll(PDO::FETCH_ASSOC);
         error_log("fetchJoinableTrips for user $user_id returned: " . print_r($joinable_trips, true));
         return $joinable_trips;

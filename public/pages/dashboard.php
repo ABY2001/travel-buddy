@@ -151,7 +151,8 @@ include '../includes/navbar.php';
                     'invalid_trip' => 'Invalid trip ID.',
                     'unauthorized_action' => 'You are not authorized to perform this action.',
                     'update_failed' => 'Failed to update the request. Please try again.',
-                    'solo_trip_limit_exceeded' => 'Cannot approve more than one member for a solo trip.'
+                    'solo_trip_limit_exceeded' => 'Cannot approve more than one member for a solo trip.',
+                    'gender_mismatch' => 'Your gender does not match the trip\'s preference.'
                 ];
                 echo htmlspecialchars($error_messages[$error] ?? 'An unknown error occurred.');
                 ?>
