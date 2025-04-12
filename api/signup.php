@@ -10,17 +10,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = isset($_POST['password']) ? password_hash($_POST['password'], PASSWORD_BCRYPT) : null;
     $age = htmlspecialchars($_POST['age'] ?? '');
     $phone_number = htmlspecialchars($_POST['phone_number'] ?? '');
-    
+    $gender = htmlspecialchars($_POST['gender'] ?? '');
     $is_admin = isset($_POST['is_admin']) ? 1 : 0;
+
+    // Validate gender
+    $valid_genders = ['male', 'female', 'other'];
+    if (!in_array($gender, $valid_genders)) {
+        die("Invalid gender selection");
+    }
 
     if (!isset($pdo)) {
         die("Database connection not found.");
     }
 
     try {
-        $query = "INSERT INTO users (name, email, password, age, phone_number, is_admin) VALUES (?, ?, ?, ?, ?, ?)";
+        $query = "INSERT INTO users (name, email, password, age, gender, phone_number, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($query);
-        $stmt->execute([$name, $email, $password, $age, $phone_number, $is_admin]);
+        $stmt->execute([$name, $email, $password, $age, $gender, $phone_number, $is_admin]);
 
         // Get the last inserted ID and set it in the session
         $user_id = $pdo->lastInsertId();
@@ -38,7 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit();
     } catch (PDOException $e) {
-        die("Query failed: " . $e->getMessage());
+        error_log("Signup error: " . $e->getMessage());
+        header("Location: /public/pages/signup.php?error=signup_failed");
+        exit();
     }
 } else {
     header("Location: /public/pages/register.php");

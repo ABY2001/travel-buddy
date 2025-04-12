@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="../assets/commonstyles.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
-
 <body>
     <div class="wrapper">
         <form action="../../api/signup.php" method="post">
@@ -37,6 +35,16 @@
                 <input type="date" name="age" placeholder="Date of Birth" required>
             </div>
 
+            <div class="input-box">
+                
+                <select aria-placeholder="Gender" id="gender" name="gender" required>
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
             <button type="submit" class="btn">Sign Up</button>
 
             <div class="register-link">
@@ -45,5 +53,4 @@
         </form>
     </div>
 </body>
-
 </html>
