@@ -26,10 +26,10 @@ include '../includes/navbar.php';
         <button class="btn" id="openCreateModal">Create a Trip</button>
     </div>
 
-    <div class="section join">
+    <!-- <div class="section join">
         <img src="../assets/group-travel.jpg" alt="Create a Squad of 4 People" class="trip-image">
         <button class="btn" id="openGroupModal">Create a Squad of 4 People</button>
-    </div>
+    </div> -->
 </div>
 
 <!-- Create Trip Modal -->
