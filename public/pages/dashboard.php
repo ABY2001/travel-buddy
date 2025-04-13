@@ -273,7 +273,7 @@ include '../includes/navbar.php';
                     } else if (header === 'Creator') {
                         td.innerHTML = `<span class="creator-tag">Creator: ${item[key + '_name'] || 'Unknown'} (${item[key + '_email'] || 'No email'})</span>`;
                     } else if (header === 'Requester') {
-                        td.innerHTML = `${item[key + '_name'] || 'Unknown'}<br><span style="color: #ffaa00; font-size: 12px;">(${item[key + '_email'] || 'No email'})</span>`;
+                        td.innerHTML = `${item[key] || 'Unknown'}<br><span style="color: #ffaa00; font-size: 12px;">(${item['requester_email'] || 'No email'})</span>`;
                     } else if (header === 'Action' && tableId === 'joinableTripsTable' && item.id) {
                         td.innerHTML = `<a href="/travel-buddy/api/join_trip.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
                     } else if (header === 'Action' && tableId === 'pendingRequestsTable' && item.request_id) {
@@ -337,7 +337,7 @@ include '../includes/navbar.php';
             'Trip Destination': 'destination',
             'Travel Date': 'travel_date',
             'Ending Date': 'ending_date',
-            'Requester': 'requester_name',
+            'Requester': 'requester_name', // Maps to requester_name, but we'll handle email separately in display
             'Requested At': 'joined_at',
             'Action': 'request_id'
         };

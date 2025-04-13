@@ -77,17 +77,26 @@ function fetchPendingJoinRequests($user_id) {
     try {
         $current_date = date('Y-m-d');
         $stmt = $pdo->prepare("
-            SELECT tm.id AS request_id, tm.trip_id, st.destination, st.travel_date, st.ending_date,
-                   u.name AS requester_name, tm.status, tm.joined_at
+            SELECT tm.id AS request_id, tm.trip_id, COALESCE(st.destination, 'Unknown') AS destination,
+                   COALESCE(st.travel_date, 'N/A') AS travel_date, COALESCE(st.ending_date, 'N/A') AS ending_date,
+                   COALESCE(u.name, 'Unknown') AS requester_name, COALESCE(u.email, 'No email') AS requester_email,
+                   tm.status, tm.joined_at
             FROM trip_members tm
-            JOIN solo_trips st ON tm.trip_id = st.id
-            JOIN users u ON tm.user_id = u.id
-            WHERE st.created_by = :user_id AND tm.status = 'pending'
+            LEFT JOIN solo_trips st ON tm.trip_id = st.id AND st.created_by = :user_id
+            LEFT JOIN users u ON tm.user_id = u.id
+            WHERE tm.status = 'pending'
             AND (st.ending_date IS NULL OR st.ending_date >= :current_date)
         ");
         $stmt->execute([':user_id' => $user_id, ':current_date' => $current_date]);
         $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
         error_log("fetchPendingJoinRequests for user $user_id returned: " . print_r($requests, true) . " at " . date('Y-m-d H:i:s'));
+        if (empty($requests)) {
+            error_log("No pending requests found for user_id: $user_id. Checking trip_members: " . print_r($pdo->query("SELECT * FROM trip_members WHERE status = 'pending'")->fetchAll(PDO::FETCH_ASSOC), true));
+            error_log("Checking solo_trips for user_id: $user_id: " . print_r($pdo->query("SELECT * FROM solo_trips WHERE created_by = $user_id")->fetchAll(PDO::FETCH_ASSOC), true));
+            error_log("Checking users for trip_members user_ids: " . print_r($pdo->query("SELECT id, name, email FROM users WHERE id IN (SELECT user_id FROM trip_members WHERE status = 'pending')")->fetchAll(PDO::FETCH_ASSOC), true));
+        } else {
+            error_log("Pending requests data: " . print_r($requests, true));
+        }
         return $requests;
     } catch (PDOException $e) {
         error_log("Database error in fetchPendingJoinRequests: " . $e->getMessage() . " at " . date('Y-m-d H:i:s'));
