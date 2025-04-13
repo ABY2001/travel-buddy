@@ -169,13 +169,15 @@ include '../includes/navbar.php';
                     'unauthorized_action' => 'You are not authorized to perform this action.',
                     'update_failed' => 'Failed to update the request. Please try again.',
                     'solo_trip_limit_exceeded' => 'Cannot approve more than one member for a solo trip.',
-                    'gender_mismatch' => 'Your gender does not match the trip\'s preference.'
+                    'gender_mismatch' => 'Your gender does not match the trip\'s preference.',
+                    'delete_failed' => 'Failed to delete the trip. Ensure you are the creator and the trip hasn\'t started.',
+                    'trip_started' => 'Cannot delete a trip that has already started.'
                 ];
                 echo htmlspecialchars($error_messages[$error] ?? 'An unknown error occurred.');
                 ?>
             </p>
         <?php elseif (isset($_GET['success'])): ?>
-            <p class="success-message" id="successMessage"><?php echo htmlspecialchars("Request " . $_GET['success'] . " successfully!"); ?></p>
+            <p class="success-message" id="successMessage"><?php echo htmlspecialchars("Trip deleted successfully!"); ?></p>
         <?php endif; ?>
 
         <!-- Tab Navigation -->
@@ -184,7 +186,7 @@ include '../includes/navbar.php';
             <a href="?section=joined-trips" class="<?php echo $active_section === 'joined-trips' ? 'active' : ''; ?>">Joined Trips</a>
             <a href="?section=joinable-trips" class="<?php echo $active_section === 'joinable-trips' ? 'active' : ''; ?>">Joinable Trips</a>
             <a href="?section=pending-requests" class="<?php echo $active_section === 'pending-requests' ? 'active' : ''; ?>">Pending Requests</a>
-            <a href="?section=previous-trips" class="<?php echo $active_section === 'previous-trips' ? 'active' : ''; ?>">Previous Trips</a> <!-- New tab -->
+            <a href="?section=previous-trips" class="<?php echo $active_section === 'previous-trips' ? 'active' : ''; ?>">Previous Trips</a>
         </div>
 
         <!-- Tab Content with Dynamic Tables -->
@@ -200,7 +202,7 @@ include '../includes/navbar.php';
         <div class="tab-content <?php echo $active_section === 'pending-requests' ? 'active' : ''; ?>" id="pending-requests">
             <table class="dynamic-table" id="pendingRequestsTable"></table>
         </div>
-        <div class="tab-content <?php echo $active_section === 'previous-trips' ? 'active' : ''; ?>" id="previous-trips"> <!-- New tab content -->
+        <div class="tab-content <?php echo $active_section === 'previous-trips' ? 'active' : ''; ?>" id="previous-trips">
             <table class="dynamic-table" id="previousTripsTable"></table>
         </div>
     </div>
@@ -249,6 +251,7 @@ include '../includes/navbar.php';
 
             // Create body
             const tbody = document.createElement('tbody');
+            const currentDate = new Date('2025-04-13'); // Current date
             data.forEach(item => {
                 const row = document.createElement('tr');
                 for (let header in columnMapping) {
@@ -269,6 +272,8 @@ include '../includes/navbar.php';
                         td.appendChild(membersDiv);
                     } else if (header === 'Creator') {
                         td.innerHTML = `<span class="creator-tag">Creator: ${item[key + '_name'] || 'Unknown'} (${item[key + '_email'] || 'No email'})</span>`;
+                    } else if (header === 'Requester') {
+                        td.innerHTML = `${item[key + '_name'] || 'Unknown'}<br><span style="color: #ffaa00; font-size: 12px;">(${item[key + '_email'] || 'No email'})</span>`;
                     } else if (header === 'Action' && tableId === 'joinableTripsTable' && item.id) {
                         td.innerHTML = `<a href="/travel-buddy/api/join_trip.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
                     } else if (header === 'Action' && tableId === 'pendingRequestsTable' && item.request_id) {
@@ -276,6 +281,14 @@ include '../includes/navbar.php';
                             <a href="/travel-buddy/api/manage_join_request.php?request_id=${item.request_id}&action=approve" class="join-btn">Approve</a>
                             <a href="/travel-buddy/api/manage_join_request.php?request_id=${item.request_id}&action=reject" class="join-btn" style="background-color: #ff4444;">Reject</a>
                         `;
+                    } else if (header === 'Action' && tableId === 'myTripsTable' && item.id) {
+                        const tripStartDate = new Date(item['travel_date']);
+                        if (tripStartDate > currentDate) {
+                            td.innerHTML = `<a href="/travel-buddy/api/delete_trip.php?trip_id=${item.id}" class="join-btn" style="background-color: #ff4444;" onclick="return confirm('Are you sure you want to delete this trip?')">Delete</a>`;
+                        } else {
+                            td.textContent = 'Cannot delete (trip started)';
+                            td.style.color = '#ff4444';
+                        }
                     } else {
                         td.textContent = item[key] !== undefined ? item[key] : 'N/A';
                     }
@@ -296,7 +309,8 @@ include '../includes/navbar.php';
             'Created At': 'created_at',
             'Status': 'status',
             'Creator': 'creator',
-            'Members': 'members'
+            'Members': 'members',
+            'Action': 'id' // Added for delete button
         };
         const joinedTripsColumns = {
             'Destination': 'destination',
@@ -305,7 +319,7 @@ include '../includes/navbar.php';
             'Budget': 'budget',
             'Gender Preference': 'gender_preference',
             'Created At': 'created_at',
-            'Status': 'trip_status', // Using trip_status alias from query
+            'Status': 'trip_status',
             'Creator': 'creator',
             'Members': 'members'
         };
@@ -327,7 +341,7 @@ include '../includes/navbar.php';
             'Requested At': 'joined_at',
             'Action': 'request_id'
         };
-        const previousTripsColumns = { // New column mapping
+        const previousTripsColumns = {
             'Destination': 'destination',
             'Travel Date': 'travel_date',
             'Ending Date': 'ending_date',
@@ -344,13 +358,13 @@ include '../includes/navbar.php';
         populateTable('joinedTripsTable', joinedTrips, joinedTripsColumns);
         populateTable('joinableTripsTable', joinableTrips, joinableTripsColumns);
         populateTable('pendingRequestsTable', pendingRequests, pendingRequestsColumns);
-        populateTable('previousTripsTable', allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')), previousTripsColumns); // Filter for previous trips
+        populateTable('previousTripsTable', allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')), previousTripsColumns);
 
         // Frontend search function
         function filterTables() {
             const locationInput = document.getElementById('searchInput').value.toLowerCase();
             const startDateInput = document.getElementById('searchDate').value;
-            const endDateInput = document.getElementById('endDateFilter')?.value; // Optional end date filter
+            const endDateInput = document.getElementById('endDateFilter')?.value;
 
             const filterTrip = (trip) => {
                 const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
@@ -360,11 +374,11 @@ include '../includes/navbar.php';
             };
 
             // Filter My Trips
-            let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip); // Only future trips
+            let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
             populateTable('myTripsTable', myTripsData, myTripsColumns);
 
             // Filter Joined Trips
-            let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip); // Only future trips
+            let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
             populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
             // Filter Joinable Trips
@@ -381,7 +395,7 @@ include '../includes/navbar.php';
             populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
 
             // Filter Previous Trips
-            let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip); // Only past trips
+            let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip);
             populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
         }
 
