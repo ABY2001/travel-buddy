@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $trip_type = $_POST['trip_type'] ?? '';
     $destination = trim($_POST['destination'] ?? '');
     $travel_date = trim($_POST['travel_date'] ?? '');
+    $ending_date = trim($_POST['ending_date'] ?? ''); // New field
     $budget = floatval($_POST['budget'] ?? 0);
     $gender_preference = $_POST['gender_preference'] ?? 'any';
     $created_by = $_SESSION['user']['id']; // Get logged-in user ID
@@ -21,8 +22,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($gender_preference, $valid_gender_preferences)) {
         throw new Exception("Invalid gender preference");
     }
-    if (empty($destination) || empty($travel_date) || $budget <= 0) {
+    if (empty($destination) || empty($travel_date) || empty($ending_date) || $budget <= 0) {
         throw new Exception("Missing or invalid required fields");
+    }
+    // Validate that ending_date is after travel_date
+    $travelDate = new DateTime($travel_date);
+    $endingDate = new DateTime($ending_date);
+    if ($endingDate <= $travelDate) {
+        throw new Exception("Ending date must be after travel date");
     }
 
     // Debugging
@@ -34,12 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($trip_type === 'solo') {
             $stmt = $pdo->prepare("
-                INSERT INTO solo_trips (destination, travel_date, budget, gender_preference, created_by)
-                VALUES (:destination, :travel_date, :budget, :gender_preference, :created_by)
+                INSERT INTO solo_trips (destination, travel_date, ending_date, budget, gender_preference, created_by, created_at, status)
+                VALUES (:destination, :travel_date, :ending_date, :budget, :gender_preference, :created_by, NOW(), 'active')
             ");
             $stmt->execute([
                 ':destination' => $destination,
                 ':travel_date' => $travel_date,
+                ':ending_date' => $ending_date, // New binding
                 ':budget' => $budget,
                 ':gender_preference' => $gender_preference,
                 ':created_by' => $created_by
@@ -66,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
         error_log("Trip created successfully for user $created_by (type: $trip_type)");
-        header("Location: ../public/pages/dashboard.php?success=trip_created");
+        header("Location: ../public/pages/dashboard.php?section=my-trips&success=trip_created");
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();

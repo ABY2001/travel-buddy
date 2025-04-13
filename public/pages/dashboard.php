@@ -152,6 +152,7 @@ include '../includes/navbar.php';
         <div class="search-bar">
             <input type="text" id="searchInput" placeholder="Search by location..." onkeyup="filterTables()">
             <input type="date" id="searchDate" onchange="filterTables()">
+            <!-- <input type="date" id="endDateFilter" placeholder="End Date" onchange="filterTables()"> -->
         </div>
 
         <?php if ($error_message): ?>
@@ -281,38 +282,44 @@ include '../includes/navbar.php';
             table.appendChild(tbody);
         }
 
-        // Column mappings (header: data key) - Removed 'Trip Type'
+        // Column mappings (header: data key) with new fields
         const myTripsColumns = {
             'Destination': 'destination',
             'Travel Date': 'travel_date',
+            'Ending Date': 'ending_date',
             'Budget': 'budget',
             'Gender Preference': 'gender_preference',
             'Created At': 'created_at',
+            'Status': 'status',
             'Creator': 'creator',
             'Members': 'members'
         };
         const joinedTripsColumns = {
             'Destination': 'destination',
             'Travel Date': 'travel_date',
+            'Ending Date': 'ending_date',
             'Budget': 'budget',
             'Gender Preference': 'gender_preference',
             'Created At': 'created_at',
+            'Status': 'trip_status', // Using trip_status alias from query
             'Creator': 'creator',
-            'Members': 'members',
-            'Status': 'status'
+            'Members': 'members'
         };
         const joinableTripsColumns = {
             'Destination': 'destination',
             'Travel Date': 'travel_date',
+            'Ending Date': 'ending_date',
             'Budget': 'budget',
             'Gender Preference': 'gender_preference',
             'Created At': 'created_at',
+            'Status': 'status',
             'Action': 'id'
         };
         const pendingRequestsColumns = {
             'Trip Destination': 'destination',
             'Travel Date': 'travel_date',
-            'Requester': 'name',
+            'Ending Date': 'ending_date',
+            'Requester': 'requester_name',
             'Requested At': 'joined_at',
             'Action': 'request_id'
         };
@@ -326,12 +333,14 @@ include '../includes/navbar.php';
         // Frontend search function
         function filterTables() {
             const locationInput = document.getElementById('searchInput').value.toLowerCase();
-            const dateInput = document.getElementById('searchDate').value;
+            const startDateInput = document.getElementById('searchDate').value;
+            const endDateInput = document.getElementById('endDateFilter').value;
 
             const filterTrip = (trip) => {
                 const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
-                const dateMatch = !dateInput || new Date(trip.travel_date) >= new Date(dateInput);
-                return destinationMatch && dateMatch;
+                const startDateMatch = !startDateInput || new Date(trip.travel_date) >= new Date(startDateInput);
+                const endDateMatch = !endDateInput || (trip.ending_date && new Date(trip.ending_date) <= new Date(endDateInput));
+                return destinationMatch && startDateMatch && endDateMatch;
             };
 
             // Filter My Trips
@@ -349,8 +358,9 @@ include '../includes/navbar.php';
             // Filter Pending Requests
             let pendingRequestsData = pendingRequests.filter((request) => {
                 const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
-                const dateMatch = !dateInput || request.travel_date === dateInput;
-                return destinationMatch && dateMatch;
+                const startDateMatch = !startDateInput || new Date(request.travel_date) >= new Date(startDateInput);
+                const endDateMatch = !endDateInput || (request.ending_date && new Date(request.ending_date) <= new Date(endDateInput));
+                return destinationMatch && startDateMatch && endDateMatch;
             });
             populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
         }

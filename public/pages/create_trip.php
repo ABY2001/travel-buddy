@@ -47,6 +47,9 @@ include '../includes/navbar.php';
             <label for="createDate">Travel Date:</label>
             <input type="date" id="createDate" name="travel_date" required>
 
+            <label for="endingDate">Ending Date:</label> <!-- New field -->
+            <input type="date" id="endingDate" name="ending_date" required>
+
             <label for="createBudget">Budget (in USD):</label>
             <input type="number" id="createBudget" name="budget" min="0" step="0.01" required>
 
@@ -129,6 +132,18 @@ include '../includes/navbar.php';
             setTimeout(() => groupError.style.display = 'none', 5000);
         }
     });
+
+    // Client-side validation for ending date
+    const travelDate = document.getElementById('createDate');
+    const endingDate = document.getElementById('endingDate');
+    if (travelDate && endingDate) {
+        endingDate.addEventListener('change', function() {
+            if (new Date(endingDate.value) <= new Date(travelDate.value)) {
+                alert('Ending date must be after travel date!');
+                endingDate.value = '';
+            }
+        });
+    }
 </script>
 </body>
 </html>
