@@ -319,13 +319,12 @@ include '../includes/navbar.php';
 
         // Frontend search function
         function filterTables() {
-        const locationInput = document. getElementById('searchInput').value.toLowerCase();
-        const dateInput = document. getElementById('searchDate').value;
+        const locationInput = document.getElementById('searchInput').value.toLowerCase();
+        const dateInput = document.getElementById('searchDate').value;
 
         const filterTrip = trip => {
         const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
-        const dateMatch = !dateInput || new Date(trip.travel_date) <= new Date(dateInput);
-
+        const dateMatch = !dateInput || trip.travel_date === dateInput;
         return destinationMatch && dateMatch;
     };
 
