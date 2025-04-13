@@ -1,8 +1,9 @@
 <?php
 // File: /public/pages/dashboard.php
 session_start();
+error_log("Dashboard loaded at " . date('Y-m-d H:i:s') . " with user_id: " . ($_SESSION['user']['id'] ?? 'not set'));
 if (!isset($_SESSION['user']['id'])) {
-    header("Location: /public/pages/login.php");
+    header("Location: /travel-buddy/public/pages/login.php");
     exit;
 }
 
@@ -15,15 +16,23 @@ $active_section = isset($_GET['section']) ? $_GET['section'] : 'my-trips';
 
 // Fetch all trips data
 $all_trips = fetchUserTrips($user_id);
+error_log("Fetched all_trips for user_id $user_id: " . print_r($all_trips, true));
 $joinable_trips = fetchJoinableTrips($user_id);
+error_log("Fetched joinable_trips for user_id $user_id: " . print_r($joinable_trips, true));
 $pending_requests = fetchPendingJoinRequests($user_id);
+error_log("Fetched pending_requests for user_id $user_id: " . print_r($pending_requests, true));
 $joined_trips = fetchJoinedTrips($user_id);
+error_log("Fetched joined_trips for user_id $user_id: " . print_r($joined_trips, true));
 
 if (isset($all_trips['error'])) $error_message = $all_trips['error'];
 elseif (isset($joinable_trips['error'])) $error_message = $joinable_trips['error'];
 elseif (isset($pending_requests['error'])) $error_message = $pending_requests['error'];
 elseif (isset($joined_trips['error'])) $error_message = $joined_trips['error'];
 else $error_message = '';
+
+if ($error_message) {
+    error_log("Error message set: $error_message");
+}
 
 // Convert data to JSON for JavaScript
 $all_trips_json = json_encode($all_trips);
@@ -61,8 +70,8 @@ include '../includes/navbar.php';
         }
 
         .search-bar input[type="date"] {
-        margin-left: 10px;
-        width: 200px;
+            margin-left: 10px;
+            width: 200px;
         }
 
         .search-bar input:focus {
@@ -256,11 +265,11 @@ include '../includes/navbar.php';
                     } else if (header === 'Creator') {
                         td.innerHTML = `<span class="creator-tag">Creator: ${item[key + '_name'] || 'Unknown'} (${item[key + '_email'] || 'No email'})</span>`;
                     } else if (header === 'Action' && tableId === 'joinableTripsTable' && item.id) {
-                        td.innerHTML = `<a href="../../api/join_trip.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
+                        td.innerHTML = `<a href="/travel-buddy/api/join_trip.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
                     } else if (header === 'Action' && tableId === 'pendingRequestsTable' && item.request_id) {
                         td.innerHTML = `
-                            <a href="../../api/manage_join_request.php?request_id=${item.request_id}&action=approve" class="join-btn">Approve</a>
-                            <a href="../../api/manage_join_request.php?request_id=${item.request_id}&action=reject" class="join-btn" style="background-color: #ff4444;">Reject</a>
+                            <a href="/travel-buddy/api/manage_join_request.php?request_id=${item.request_id}&action=approve" class="join-btn">Approve</a>
+                            <a href="/travel-buddy/api/manage_join_request.php?request_id=${item.request_id}&action=reject" class="join-btn" style="background-color: #ff4444;">Reject</a>
                         `;
                     } else {
                         td.textContent = item[key] !== undefined ? item[key] : 'N/A';
@@ -272,9 +281,8 @@ include '../includes/navbar.php';
             table.appendChild(tbody);
         }
 
-        // Column mappings (header: data key)
+        // Column mappings (header: data key) - Removed 'Trip Type'
         const myTripsColumns = {
-            'Trip Type': 'trip_type',
             'Destination': 'destination',
             'Travel Date': 'travel_date',
             'Budget': 'budget',
@@ -284,7 +292,6 @@ include '../includes/navbar.php';
             'Members': 'members'
         };
         const joinedTripsColumns = {
-            'Trip Type': 'trip_type',
             'Destination': 'destination',
             'Travel Date': 'travel_date',
             'Budget': 'budget',
@@ -295,20 +302,19 @@ include '../includes/navbar.php';
             'Status': 'status'
         };
         const joinableTripsColumns = {
-            'Trip Type': 'trip_type',
             'Destination': 'destination',
             'Travel Date': 'travel_date',
             'Budget': 'budget',
             'Gender Preference': 'gender_preference',
             'Created At': 'created_at',
-            'Action': 'id' // Using id for the join action
+            'Action': 'id'
         };
         const pendingRequestsColumns = {
             'Trip Destination': 'destination',
             'Travel Date': 'travel_date',
-            'Requester': 'name', // Assuming requester name is available
+            'Requester': 'name',
             'Requested At': 'joined_at',
-            'Action': 'request_id' // Using request_id for the action
+            'Action': 'request_id'
         };
 
         // Initial population
@@ -319,37 +325,35 @@ include '../includes/navbar.php';
 
         // Frontend search function
         function filterTables() {
-        const locationInput = document. getElementById('searchInput').value.toLowerCase();
-        const dateInput = document. getElementById('searchDate').value;
+            const locationInput = document.getElementById('searchInput').value.toLowerCase();
+            const dateInput = document.getElementById('searchDate').value;
 
-        const filterTrip = trip => {
-        const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
-        const dateMatch = !dateInput || new Date(trip.travel_date) <= new Date(dateInput);
+            const filterTrip = (trip) => {
+                const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
+                const dateMatch = !dateInput || new Date(trip.travel_date) >= new Date(dateInput);
+                return destinationMatch && dateMatch;
+            };
 
-        return destinationMatch && dateMatch;
-    };
+            // Filter My Trips
+            let myTripsData = allTrips.filter(filterTrip);
+            populateTable('myTripsTable', myTripsData, myTripsColumns);
 
-    // Filter My Trips
-    let myTripsData = allTrips.filter(filterTrip);
-    populateTable('myTripsTable', myTripsData, myTripsColumns);
+            // Filter Joined Trips
+            let joinedTripsData = joinedTrips.filter(filterTrip);
+            populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
-    // Filter Joined Trips
-    let joinedTripsData = joinedTrips.filter(filterTrip);
-    populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
+            // Filter Joinable Trips
+            let joinableTripsData = joinableTrips.filter(filterTrip);
+            populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
 
-    // Filter Joinable Trips
-    let joinableTripsData = joinableTrips.filter(filterTrip);
-    populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
-
-    // Filter Pending Requests (assuming similar structure)
-    let pendingRequestsData = pendingRequests.filter(request => {
-        const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
-        const dateMatch = !dateInput || request.travel_date === dateInput;
-        return destinationMatch && dateMatch;
-    });
-    populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
-}
-
+            // Filter Pending Requests
+            let pendingRequestsData = pendingRequests.filter((request) => {
+                const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
+                const dateMatch = !dateInput || request.travel_date === dateInput;
+                return destinationMatch && dateMatch;
+            });
+            populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
+        }
 
         const successMessage = document.getElementById('successMessage');
         if (successMessage) {
