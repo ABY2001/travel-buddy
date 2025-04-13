@@ -61,8 +61,8 @@ include '../includes/navbar.php';
         }
 
         .search-bar input[type="date"] {
-            margin-left: 10px;
-            width: 200px;
+        margin-left: 10px;
+        width: 200px;
         }
 
         .search-bar input:focus {
@@ -133,34 +133,6 @@ include '../includes/navbar.php';
         .dynamic-table tbody tr:hover {
             background: rgba(255, 255, 255, 0.07);
         }
-
-        /* Action Buttons */
-        .join-btn {
-            display: inline-block;
-            padding: 8px 14px;
-            background-color: #ffcc00;
-            color: #1a1a1a;
-            text-decoration: none;
-            font-weight: 600;
-            border-radius: 6px;
-            transition: 0.3s ease;
-            font-size: 14px;
-        }
-
-        .join-btn:hover {
-            background-color: #ffaa00;
-            color: #000;
-        }
-
-        /* Delete button specific styling */
-        .join-btn[onclick*="delete"] {
-            background-color: #ff4444;
-            color: white;
-        }
-
-        .join-btn[onclick*="delete"]:hover {
-            background-color: #cc0000;
-        }
     </style>
 </head>
 <body>
@@ -187,14 +159,13 @@ include '../includes/navbar.php';
                     'unauthorized_action' => 'You are not authorized to perform this action.',
                     'update_failed' => 'Failed to update the request. Please try again.',
                     'solo_trip_limit_exceeded' => 'Cannot approve more than one member for a solo trip.',
-                    'gender_mismatch' => 'Your gender does not match the trip\'s preference.',
-                    'delete_failed' => 'Failed to delete the trip. Please try again.'
+                    'gender_mismatch' => 'Your gender does not match the trip\'s preference.'
                 ];
                 echo htmlspecialchars($error_messages[$error] ?? 'An unknown error occurred.');
                 ?>
             </p>
         <?php elseif (isset($_GET['success'])): ?>
-            <p class="success-message" id="successMessage"><?php echo htmlspecialchars("Trip " . $_GET['success'] . " successfully!"); ?></p>
+            <p class="success-message" id="successMessage"><?php echo htmlspecialchars("Request " . $_GET['success'] . " successfully!"); ?></p>
         <?php endif; ?>
 
         <!-- Tab Navigation -->
@@ -284,8 +255,6 @@ include '../includes/navbar.php';
                         td.appendChild(membersDiv);
                     } else if (header === 'Creator') {
                         td.innerHTML = `<span class="creator-tag">Creator: ${item[key + '_name'] || 'Unknown'} (${item[key + '_email'] || 'No email'})</span>`;
-                    } else if (header === 'Action' && tableId === 'myTripsTable' && item.id) {
-                        td.innerHTML = `<a href="../../api/delete_trip_user.php?trip_id=${item.id}" class="join-btn" onclick="return confirm('Are you sure you want to delete this trip?')">Delete</a>`;
                     } else if (header === 'Action' && tableId === 'joinableTripsTable' && item.id) {
                         td.innerHTML = `<a href="../../api/join_trip.php?trip_id=${item.id}&type=solo" class="join-btn">Join</a>`;
                     } else if (header === 'Action' && tableId === 'pendingRequestsTable' && item.request_id) {
@@ -312,8 +281,7 @@ include '../includes/navbar.php';
             'Gender Preference': 'gender_preference',
             'Created At': 'created_at',
             'Creator': 'creator',
-            'Members': 'members',
-            'Action': 'id' // Added for delete action
+            'Members': 'members'
         };
         const joinedTripsColumns = {
             'Trip Type': 'trip_type',
@@ -351,35 +319,37 @@ include '../includes/navbar.php';
 
         // Frontend search function
         function filterTables() {
-            const locationInput = document.getElementById('searchInput').value.toLowerCase();
-            const dateInput = document.getElementById('searchDate').value;
+        const locationInput = document. getElementById('searchInput').value.toLowerCase();
+        const dateInput = document. getElementById('searchDate').value;
 
-            const filterTrip = trip => {
-                const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
-                const dateMatch = !dateInput || trip.travel_date === dateInput;
-                return destinationMatch && dateMatch;
-            };
+        const filterTrip = trip => {
+        const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
+        const dateMatch = !dateInput || new Date(trip.travel_date) <= new Date(dateInput);
 
-            // Filter My Trips
-            let myTripsData = allTrips.filter(filterTrip);
-            populateTable('myTripsTable', myTripsData, myTripsColumns);
+        return destinationMatch && dateMatch;
+    };
 
-            // Filter Joined Trips
-            let joinedTripsData = joinedTrips.filter(filterTrip);
-            populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
+    // Filter My Trips
+    let myTripsData = allTrips.filter(filterTrip);
+    populateTable('myTripsTable', myTripsData, myTripsColumns);
 
-            // Filter Joinable Trips
-            let joinableTripsData = joinableTrips.filter(filterTrip);
-            populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
+    // Filter Joined Trips
+    let joinedTripsData = joinedTrips.filter(filterTrip);
+    populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
-            // Filter Pending Requests (assuming similar structure)
-            let pendingRequestsData = pendingRequests.filter(request => {
-                const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
-                const dateMatch = !dateInput || request.travel_date === dateInput;
-                return destinationMatch && dateMatch;
-            });
-            populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
-        }
+    // Filter Joinable Trips
+    let joinableTripsData = joinableTrips.filter(filterTrip);
+    populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
+
+    // Filter Pending Requests (assuming similar structure)
+    let pendingRequestsData = pendingRequests.filter(request => {
+        const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
+        const dateMatch = !dateInput || request.travel_date === dateInput;
+        return destinationMatch && dateMatch;
+    });
+    populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
+}
+
 
         const successMessage = document.getElementById('successMessage');
         if (successMessage) {
