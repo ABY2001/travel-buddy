@@ -184,6 +184,7 @@ include '../includes/navbar.php';
             <a href="?section=joined-trips" class="<?php echo $active_section === 'joined-trips' ? 'active' : ''; ?>">Joined Trips</a>
             <a href="?section=joinable-trips" class="<?php echo $active_section === 'joinable-trips' ? 'active' : ''; ?>">Joinable Trips</a>
             <a href="?section=pending-requests" class="<?php echo $active_section === 'pending-requests' ? 'active' : ''; ?>">Pending Requests</a>
+            <a href="?section=previous-trips" class="<?php echo $active_section === 'previous-trips' ? 'active' : ''; ?>">Previous Trips</a> <!-- New tab -->
         </div>
 
         <!-- Tab Content with Dynamic Tables -->
@@ -198,6 +199,9 @@ include '../includes/navbar.php';
         </div>
         <div class="tab-content <?php echo $active_section === 'pending-requests' ? 'active' : ''; ?>" id="pending-requests">
             <table class="dynamic-table" id="pendingRequestsTable"></table>
+        </div>
+        <div class="tab-content <?php echo $active_section === 'previous-trips' ? 'active' : ''; ?>" id="previous-trips"> <!-- New tab content -->
+            <table class="dynamic-table" id="previousTripsTable"></table>
         </div>
     </div>
 
@@ -323,18 +327,30 @@ include '../includes/navbar.php';
             'Requested At': 'joined_at',
             'Action': 'request_id'
         };
+        const previousTripsColumns = { // New column mapping
+            'Destination': 'destination',
+            'Travel Date': 'travel_date',
+            'Ending Date': 'ending_date',
+            'Budget': 'budget',
+            'Gender Preference': 'gender_preference',
+            'Created At': 'created_at',
+            'Status': 'status',
+            'Creator': 'creator',
+            'Members': 'members'
+        };
 
         // Initial population
         populateTable('myTripsTable', allTrips, myTripsColumns);
         populateTable('joinedTripsTable', joinedTrips, joinedTripsColumns);
         populateTable('joinableTripsTable', joinableTrips, joinableTripsColumns);
         populateTable('pendingRequestsTable', pendingRequests, pendingRequestsColumns);
+        populateTable('previousTripsTable', allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')), previousTripsColumns); // Filter for previous trips
 
         // Frontend search function
         function filterTables() {
             const locationInput = document.getElementById('searchInput').value.toLowerCase();
             const startDateInput = document.getElementById('searchDate').value;
-            const endDateInput = document.getElementById('endDateFilter').value;
+            const endDateInput = document.getElementById('endDateFilter')?.value; // Optional end date filter
 
             const filterTrip = (trip) => {
                 const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
@@ -344,11 +360,11 @@ include '../includes/navbar.php';
             };
 
             // Filter My Trips
-            let myTripsData = allTrips.filter(filterTrip);
+            let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip); // Only future trips
             populateTable('myTripsTable', myTripsData, myTripsColumns);
 
             // Filter Joined Trips
-            let joinedTripsData = joinedTrips.filter(filterTrip);
+            let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip); // Only future trips
             populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
             // Filter Joinable Trips
@@ -363,6 +379,10 @@ include '../includes/navbar.php';
                 return destinationMatch && startDateMatch && endDateMatch;
             });
             populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
+
+            // Filter Previous Trips
+            let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip); // Only past trips
+            populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
         }
 
         const successMessage = document.getElementById('successMessage');
