@@ -22,8 +22,9 @@ function fetchUserTrips($user_id) {
         $trips = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($trips)) {
-            error_log("No trips found for user_id: $user_id. Checking all created_by: " . print_r($pdo->query("SELECT DISTINCT created_by FROM solo_trips")->fetchAll(PDO::FETCH_ASSOC), true));
-            return []; // Return empty array instead of null
+            error_log("No trips found for user_id: $user_id. Checking table existence: " . print_r($pdo->query("SHOW TABLES LIKE 'solo_trips'")->fetchAll(PDO::FETCH_ASSOC), true));
+            error_log("Checking all created_by values: " . print_r($pdo->query("SELECT DISTINCT created_by FROM solo_trips")->fetchAll(PDO::FETCH_ASSOC), true));
+            return [];
         } else {
             error_log("Found " . count($trips) . " trips for user_id: $user_id - Data: " . print_r($trips, true));
         }
@@ -39,6 +40,9 @@ function fetchUserTrips($user_id) {
         return $trips;
     } catch (PDOException $e) {
         error_log("Database error in fetchUserTrips: " . $e->getMessage() . " (SQLSTATE: " . $e->getCode() . ") at " . date('Y-m-d H:i:s'));
+        if (isset($stmt) && $stmt instanceof PDOStatement) {
+            error_log("SQL Error Info: " . print_r($stmt->errorInfo(), true));
+        }
         return ['error' => 'Failed to fetch user trips'];
     }
 }
@@ -67,7 +71,10 @@ function fetchJoinableTrips($user_id) {
         error_log("fetchJoinableTrips for user $user_id returned: " . print_r($joinable_trips, true) . " at " . date('Y-m-d H:i:s'));
         return $joinable_trips;
     } catch (PDOException $e) {
-        error_log("Database error in fetchJoinableTrips: " . $e->getMessage() . " at " . date('Y-m-d H:i:s'));
+        error_log("Database error in fetchJoinableTrips: " . $e->getMessage() . " (SQLSTATE: " . $e->getCode() . ") at " . date('Y-m-d H:i:s'));
+        if (isset($stmt) && $stmt instanceof PDOStatement) {
+            error_log("SQL Error Info: " . print_r($stmt->errorInfo(), true));
+        }
         return ['error' => 'Failed to fetch joinable trips'];
     }
 }
@@ -86,6 +93,7 @@ function fetchPendingJoinRequests($user_id) {
             LEFT JOIN users u ON tm.user_id = u.id
             WHERE tm.status = 'pending'
             AND (st.ending_date IS NULL OR st.ending_date >= :current_date)
+            AND tm.user_id != :user_id -- Exclude self-requests
         ");
         $stmt->execute([':user_id' => $user_id, ':current_date' => $current_date]);
         $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -99,7 +107,10 @@ function fetchPendingJoinRequests($user_id) {
         }
         return $requests;
     } catch (PDOException $e) {
-        error_log("Database error in fetchPendingJoinRequests: " . $e->getMessage() . " at " . date('Y-m-d H:i:s'));
+        error_log("Database error in fetchPendingJoinRequests: " . $e->getMessage() . " (SQLSTATE: " . $e->getCode() . ") at " . date('Y-m-d H:i:s'));
+        if (isset($stmt) && $stmt instanceof PDOStatement) {
+            error_log("SQL Error Info: " . print_r($stmt->errorInfo(), true));
+        }
         return ['error' => 'Failed to fetch pending requests'];
     }
 }
@@ -126,7 +137,10 @@ function fetchJoinedTrips($user_id) {
         error_log("fetchJoinedTrips for user $user_id returned: " . print_r($trips, true) . " at " . date('Y-m-d H:i:s'));
         return $trips;
     } catch (PDOException $e) {
-        error_log("Database error in fetchJoinedTrips: " . $e->getMessage() . " at " . date('Y-m-d H:i:s'));
+        error_log("Database error in fetchJoinedTrips: " . $e->getMessage() . " (SQLSTATE: " . $e->getCode() . ") at " . date('Y-m-d H:i:s'));
+        if (isset($stmt) && $stmt instanceof PDOStatement) {
+            error_log("SQL Error Info: " . print_r($stmt->errorInfo(), true));
+        }
         return ['error' => 'Failed to fetch joined trips'];
     }
 }
@@ -145,7 +159,10 @@ function fetchTripMembers($trip_id) {
         $stmt->execute([':trip_id' => $trip_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        error_log("Database error in fetchTripMembers: " . $e->getMessage() . " at " . date('Y-m-d H:i:s'));
+        error_log("Database error in fetchTripMembers: " . $e->getMessage() . " (SQLSTATE: " . $e->getCode() . ") at " . date('Y-m-d H:i:s'));
+        if (isset($stmt) && $stmt instanceof PDOStatement) {
+            error_log("SQL Error Info: " . print_r($stmt->errorInfo(), true));
+        }
         return [];
     }
 }
