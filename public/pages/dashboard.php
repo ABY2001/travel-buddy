@@ -284,7 +284,7 @@ include '../includes/navbar.php';
                     } else if (header === 'Action' && tableId === 'myTripsTable' && item.id) {
                         const tripStartDate = new Date(item['travel_date']);
                         if (tripStartDate > currentDate) {
-                            td.innerHTML = `<a href="/travel-buddy/api/delete_trip.php?trip_id=${item.id}" class="join-btn" style="background-color: #ff4444;" onclick="return confirm('Are you sure you want to delete this trip?')">Delete</a>`;
+                            td.innerHTML = `<a href="/travel-buddy/api/delete_trip_user.php?trip_id=${item.id}" class="join-btn" style="background-color: #ff4444;" onclick="return confirm('Are you sure you want to delete this trip?')">Delete</a>`;
                         } else {
                             td.textContent = 'Cannot delete (trip started)';
                             td.style.color = '#ff4444';
