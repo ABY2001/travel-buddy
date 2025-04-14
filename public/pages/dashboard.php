@@ -368,9 +368,9 @@ include '../includes/navbar.php';
 
             const filterTrip = (trip) => {
                 const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
-                const startDateMatch = !startDateInput || new Date(trip.travel_date) >= new Date(startDateInput);
+                const startDateMatch = !startDateInput || new Date(trip.travel_date) <= new Date(startDateInput);
                 const endDateMatch = !endDateInput || (trip.ending_date && new Date(trip.ending_date) <= new Date(endDateInput));
-                return destinationMatch && startDateMatch && endDateMatch;
+                return destinationMatch && startDateMatch ;
             };
 
             // Filter My Trips
@@ -388,9 +388,9 @@ include '../includes/navbar.php';
             // Filter Pending Requests
             let pendingRequestsData = pendingRequests.filter((request) => {
                 const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
-                const startDateMatch = !startDateInput || new Date(request.travel_date) >= new Date(startDateInput);
+                const startDateMatch = !startDateInput || new Date(request.travel_date) <= new Date(startDateInput);
                 const endDateMatch = !endDateInput || (request.ending_date && new Date(request.ending_date) <= new Date(endDateInput));
-                return destinationMatch && startDateMatch && endDateMatch;
+                return destinationMatch && startDateMatch ;
             });
             populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
 
