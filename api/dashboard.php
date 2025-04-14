@@ -63,6 +63,7 @@ function fetchJoinableTrips($user_id) {
             AND st.id NOT IN (
                 SELECT trip_id FROM trip_members WHERE user_id = :user_id AND status IN ('pending', 'approved')
             )
+            AND st.buddy_id IS NULL -- Exclude trips with a buddy assigned
             AND (st.gender_preference = 'any' OR st.gender_preference = :user_gender)
             AND (st.ending_date IS NULL OR st.ending_date >= :current_date)
         ");

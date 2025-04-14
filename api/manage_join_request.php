@@ -23,7 +23,8 @@ if (!isset($pdo)) {
 if (!isset($_SESSION['user']['id'])) {
     error_log("User not logged in");
     $pdo->rollBack();
-    die("Not authorized");
+    header("Location: ../public/pages/dashboard.php?section=pending-requests&error=unauthorized_action");
+    exit;
 }
 $user_id = $_SESSION['user']['id'];
 error_log("User ID: " . $user_id);
@@ -55,13 +56,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['request_id']) && isset(
 
         // Update request status
         if ($action === 'approve') {
+            // Check if a buddy is already assigned
+            $buddy_check_stmt = $pdo->prepare("SELECT buddy_id FROM solo_trips WHERE id = :trip_id");
+            $buddy_check_stmt->execute([':trip_id' => $trip_id]);
+            $buddy_id = $buddy_check_stmt->fetchColumn();
+            if ($buddy_id !== null) {
+                error_log("Buddy already assigned for trip_id: $trip_id, buddy_id: $buddy_id");
+                $pdo->rollBack();
+                header("Location: ../public/pages/dashboard.php?section=pending-requests&error=buddy_already_assigned");
+                exit;
+            }
+
             $update_stmt = $pdo->prepare("
                 UPDATE trip_members SET status = 'approved' WHERE id = :request_id
             ");
             $update_stmt->execute([':request_id' => $request_id]);
             error_log("Request $request_id approved successfully");
 
-            // Check for solo trip limit (only one approved member besides creator)
+            // Verify only one approved member besides creator
             $member_count_stmt = $pdo->prepare("
                 SELECT COUNT(*) as count
                 FROM trip_members tm
