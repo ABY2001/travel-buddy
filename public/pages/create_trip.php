@@ -15,8 +15,17 @@ include '../includes/navbar.php';
             margin-bottom: 10px;
             display: none;
         }
+        
         .success { color: green; }
         .error { color: red; }
+
+        .error-message {
+            color: red;
+            font-size: 0.85em;
+            margin-top: 2px;
+            display: block;
+        }
+
     </style>
 </head>
 <body>
@@ -39,19 +48,23 @@ include '../includes/navbar.php';
         <h2>Create a Trip</h2>
         <div class="message success" id="createSuccess"></div>
         <div class="message error" id="createError"></div>
-        <form id="soloTripForm" action="../../api/trips.php" method="POST">
+        <form id="soloTripForm" action="../../api/trips.php" method="POST" novalidate>
             <input type="hidden" name="trip_type" value="solo">
             <label for="createDest">Destination:</label>
             <input type="text" id="createDest" name="destination" required>
+            <span class="error-message" id="createDestError"></span>
 
             <label for="createDate">Travel Date:</label>
             <input type="date" id="createDate" name="travel_date" required>
+            <span class="error-message" id="createDateError"></span>
 
-            <label for="endingDate">Ending Date:</label> <!-- New field -->
+            <label for="endingDate">Ending Date:</label>
             <input type="date" id="endingDate" name="ending_date" required>
+            <span class="error-message" id="endingDateError"></span>
 
             <label for="createBudget">Budget (in USD):</label>
             <input type="number" id="createBudget" name="budget" min="0" step="0.01" required>
+            <span class="error-message" id="createBudgetError"></span>
 
             <label for="createGenderPref">Partner Gender Preference:</label>
             <select id="createGenderPref" name="gender_preference" required>
@@ -60,6 +73,7 @@ include '../includes/navbar.php';
                 <option value="female">Female</option>
                 <option value="any">Any</option>
             </select>
+            <span class="error-message" id="createGenderPrefError"></span>
 
             <button type="submit">Create Trip</button>
         </form>
@@ -103,47 +117,112 @@ include '../includes/navbar.php';
 <script src="../js/create_trip.js"></script>
 <script>
     // Handle form submission feedback
-    document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const createError = document.getElementById('createError');
-        const createSuccess = document.getElementById('createSuccess');
-        const groupError = document.getElementById('groupError');
-        const groupSuccess = document.getElementById('groupSuccess');
+    document.addEventListener("DOMContentLoaded", function () {
+    const createModal = document.getElementById("createModal");
+    const groupModal = document.getElementById("groupModal");
+    const openCreateModalBtn = document.getElementById("openCreateModal");
+    const openGroupModalBtn = document.getElementById("openGroupModal");
+    const closeCreateModalBtn = document.getElementById("closeCreateModal");
+    const closeGroupModalBtn = document.getElementById("closeGroupModal");
 
-        // Check for success or error from solo trip
-        if (urlParams.get('success') === 'trip_created') {
-            createSuccess.textContent = 'Trip created successfully!';
-            createSuccess.style.display = 'block';
-            setTimeout(() => createSuccess.style.display = 'none', 3000);
-        } else if (urlParams.get('error')) {
-            createError.textContent = decodeURIComponent(urlParams.get('error'));
-            createError.style.display = 'block';
-            setTimeout(() => createError.style.display = 'none', 5000);
+    // Modal open/close logic
+    if (openCreateModalBtn) {
+        openCreateModalBtn.addEventListener("click", () => {
+            createModal.style.display = "flex";
+        });
+    }
+
+    if (closeCreateModalBtn) {
+        closeCreateModalBtn.addEventListener("click", () => {
+            createModal.style.display = "none";
+        });
+    }
+
+    if (openGroupModalBtn) {
+        openGroupModalBtn.addEventListener("click", () => {
+            groupModal.style.display = "flex";
+        });
+    }
+
+    if (closeGroupModalBtn) {
+        closeGroupModalBtn.addEventListener("click", () => {
+            groupModal.style.display = "none";
+        });
+    }
+
+    window.addEventListener("click", (event) => {
+        if (event.target === createModal) {
+            createModal.style.display = "none";
         }
-
-        // Check for success or error from group trip
-        if (urlParams.get('success') === 'trip_created') {
-            groupSuccess.textContent = 'Squad created successfully!';
-            groupSuccess.style.display = 'block';
-            setTimeout(() => groupSuccess.style.display = 'none', 3000);
-        } else if (urlParams.get('error')) {
-            groupError.textContent = decodeURIComponent(urlParams.get('error'));
-            groupError.style.display = 'block';
-            setTimeout(() => groupError.style.display = 'none', 5000);
+        if (event.target === groupModal) {
+            groupModal.style.display = "none";
         }
     });
 
-    // Client-side validation for ending date
-    const travelDate = document.getElementById('createDate');
-    const endingDate = document.getElementById('endingDate');
-    if (travelDate && endingDate) {
-        endingDate.addEventListener('change', function() {
-            if (new Date(endingDate.value) <= new Date(travelDate.value)) {
-                alert('Ending date must be after travel date!');
-                endingDate.value = '';
+    // Helper to show/hide error spans
+    function showError(id, message) {
+        const span = document.getElementById(id);
+        if (span) span.textContent = message;
+    }
+
+    function clearAllErrors(ids) {
+        ids.forEach(id => showError(id, ""));
+    }
+
+    // SOLO TRIP VALIDATION
+    const soloForm = document.getElementById("soloTripForm");
+    if (soloForm) {
+        soloForm.addEventListener("submit", function (e) {
+            const ids = ["createDestError", "createDateError", "endingDateError", "createBudgetError", "createGenderPrefError"];
+            clearAllErrors(ids);
+            let isValid = true;
+
+            const dest = document.getElementById("createDest").value.trim();
+            const start = document.getElementById("createDate").value;
+            const end = document.getElementById("endingDate").value;
+            const budget = document.getElementById("createBudget").value;
+            const gender = document.getElementById("createGenderPref").value;
+
+            if (!dest) {
+                showError("createDestError", "Destination is required.");
+                isValid = false;
             }
+
+
+            if (!start) {
+                showError("createDateError", "Travel date is required.");
+                isValid = false;
+            }
+
+
+            if (!end) {
+                showError("endingDateError", "Ending date is required.");
+                isValid = false;
+            } else if (start && new Date(end) <= new Date(start)) {
+                showError("endingDateError", "Ending date must be after travel date.");
+                isValid = false;
+            }
+
+
+            if (!budget || parseFloat(budget) <= 0) {
+                showError("createBudgetError", "Please enter a valid budget.");
+                isValid = false;
+            }
+
+
+            if (!gender) {
+                showError("createGenderPrefError", "Please select a gender preference.");
+                isValid = false;
+            }
+
+            if (!isValid) e.preventDefault();
+        
         });
     }
+
+    // Add groupForm validation here if needed...
+});
+
 </script>
 </body>
 </html>
