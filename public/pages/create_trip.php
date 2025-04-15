@@ -54,7 +54,7 @@ include '../includes/navbar.php';
             <input type="text" id="createDest" name="destination" required>
             <span class="error-message" id="createDestError"></span>
 
-            <label for="createDate">Travel Date:</label>
+            <label for="createDate">Starting Date:</label>
             <input type="date" id="createDate" name="travel_date" required>
             <span class="error-message" id="createDateError"></span>
 
