@@ -62,7 +62,7 @@ include '../includes/navbar.php';
             <input type="date" id="endingDate" name="ending_date" required>
             <span class="error-message" id="endingDateError"></span>
 
-            <label for="createBudget">Budget (in USD):</label>
+            <label for="createBudget">Travel Budget :</label>
             <input type="number" id="createBudget" name="budget" min="0" step="0.01" required>
             <span class="error-message" id="createBudgetError"></span>
 
