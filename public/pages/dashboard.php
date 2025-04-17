@@ -74,6 +74,11 @@ include '../includes/navbar.php';
             width: 200px;
         }
 
+        .search-bar input[type="number"] {
+            margin-left: 10px;
+            width: 200px;
+        }
+
         .search-bar input:focus {
             border-color: #ffaa00;
         }
@@ -153,6 +158,7 @@ include '../includes/navbar.php';
             <input type="text" id="searchInput" placeholder="Search by location..." onkeyup="filterTables()">
             <input type="date" id="searchDate" onchange="filterTables()">
             <!-- <input type="date" id="endDateFilter" placeholder="End Date" onchange="filterTables()"> -->
+            <input type="number" id="budgetFilter" placeholder="Max Budget" oninput="filterTables()" />
         </div>
 
         <?php if ($error_message): ?>
@@ -365,12 +371,14 @@ include '../includes/navbar.php';
             const locationInput = document.getElementById('searchInput').value.toLowerCase();
             const startDateInput = document.getElementById('searchDate').value;
             const endDateInput = document.getElementById('endDateFilter')?.value;
+            const maxBudget = parseFloat(document.getElementById('budgetFilter').value);
 
             const filterTrip = (trip) => {
                 const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
                 const startDateMatch = !startDateInput || new Date(trip.travel_date) <= new Date(startDateInput);
                 const endDateMatch = !endDateInput || (trip.ending_date && new Date(trip.ending_date) <= new Date(endDateInput));
-                return destinationMatch && startDateMatch ;
+                const budgetMatch = isNaN(maxBudget) || (trip.budget !== undefined && parseFloat(trip.budget) <= maxBudget);
+                return destinationMatch && startDateMatch && budgetMatch ;
             };
 
             // Filter My Trips
@@ -390,7 +398,7 @@ include '../includes/navbar.php';
                 const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
                 const startDateMatch = !startDateInput || new Date(request.travel_date) <= new Date(startDateInput);
                 const endDateMatch = !endDateInput || (request.ending_date && new Date(request.ending_date) <= new Date(endDateInput));
-                return destinationMatch && startDateMatch ;
+                return destinationMatch && startDateMatch && budgetMatch;
             });
             populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
 
