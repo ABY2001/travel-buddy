@@ -1,6 +1,7 @@
 <?php
 // File: /travel-buddy/api/manage_join_request.php
 session_start();
+include '../api/notifications.php';
 
 // Debug
 error_log("manage_join_request.php accessed for request_id: " . (isset($_GET['request_id']) ? $_GET['request_id'] : 'null') . ", action: " . (isset($_GET['action']) ? $_GET['action'] : 'null'));
@@ -11,7 +12,9 @@ require_once __DIR__ . '/../config/db.php';
 // Debug PDO
 if (!isset($pdo)) {
     error_log("PDO is not set in manage_join_request.php");
-    die("Database connection failed");
+    setNotification("Database connection failed.", "error");
+    header("Location: ../public/pages/dashboard.php?section=pending-requests");
+    exit;
 } else {
     error_log("PDO connection active. Server Info: " . $pdo->getAttribute(PDO::ATTR_SERVER_INFO));
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -23,7 +26,8 @@ if (!isset($pdo)) {
 if (!isset($_SESSION['user']['id'])) {
     error_log("User not logged in");
     $pdo->rollBack();
-    header("Location: ../public/pages/dashboard.php?section=pending-requests&error=unauthorized_action");
+    setNotification("Unauthorized action.", "error");
+    header("Location: ../public/pages/dashboard.php?section=pending-requests");
     exit;
 }
 $user_id = $_SESSION['user']['id'];
@@ -48,7 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['request_id']) && isset(
         if (!$request) {
             error_log("Request $request_id not found or not owned by user $user_id");
             $pdo->rollBack();
-            header("Location: ../public/pages/dashboard.php?section=pending-requests&error=unauthorized_action");
+            setNotification("Unauthorized action.", "error");
+            header("Location: ../public/pages/dashboard.php?section=pending-requests");
             exit;
         }
         $trip_id = $request['trip_id'];
@@ -63,7 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['request_id']) && isset(
             if ($buddy_id !== null) {
                 error_log("Buddy already assigned for trip_id: $trip_id, buddy_id: $buddy_id");
                 $pdo->rollBack();
-                header("Location: ../public/pages/dashboard.php?section=pending-requests&error=buddy_already_assigned");
+                setNotification("Buddy already assigned for this trip.", "error");
+                header("Location: ../public/pages/dashboard.php?section=pending-requests");
                 exit;
             }
 
@@ -86,7 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['request_id']) && isset(
                 $update_stmt->execute([':request_id' => $request_id, ':status' => 'pending']); // Revert to pending
                 error_log("Solo trip limit exceeded for trip_id: $trip_id, reverting approval");
                 $pdo->rollBack();
-                header("Location: ../public/pages/dashboard.php?section=pending-requests&error=solo_trip_limit_exceeded");
+                setNotification("Cannot approve more than one member for a solo trip.", "error");
+                header("Location: ../public/pages/dashboard.php?section=pending-requests");
                 exit;
             }
 
@@ -111,31 +118,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['request_id']) && isset(
             $reject_stmt->execute([':trip_id' => $trip_id, ':request_id' => $request_id]);
             $rejected_count = $reject_stmt->rowCount();
             error_log("Rejected $rejected_count other pending requests for trip_id: $trip_id");
+
+            setNotification("Join request approved successfully!", "success");
         } elseif ($action === 'reject') {
             $update_stmt = $pdo->prepare("
                 UPDATE trip_members SET status = 'rejected' WHERE id = :request_id
             ");
             $update_stmt->execute([':request_id' => $request_id]);
             error_log("Request $request_id rejected successfully");
+            setNotification("Join request rejected.", "success");
         } else {
             error_log("Invalid action: $action");
             $pdo->rollBack();
-            header("Location: ../public/pages/dashboard.php?section=pending-requests&error=invalid_action");
+            setNotification("Invalid action.", "error");
+            header("Location: ../public/pages/dashboard.php?section=pending-requests");
             exit;
         }
 
         $pdo->commit();
-        header("Location: ../public/pages/dashboard.php?section=pending-requests&success=join");
+        header("Location: ../public/pages/dashboard.php?section=pending-requests");
         exit;
     } catch (PDOException $e) {
         $pdo->rollBack();
         error_log("Database error in manage_join_request.php: " . $e->getMessage() . " (SQLSTATE: " . $e->getCode() . ") at " . date('Y-m-d H:i:s'));
-        header("Location: ../public/pages/dashboard.php?section=pending-requests&error=update_failed");
+        setNotification("Failed to update the request.", "error");
+        header("Location: ../public/pages/dashboard.php?section=pending-requests");
         exit;
     }
 } else {
     error_log("Invalid request method or missing parameters");
     $pdo->rollBack();
+    setNotification("Invalid request.", "error");
     header("Location: ../public/pages/dashboard.php?section=pending-requests");
     exit;
 }

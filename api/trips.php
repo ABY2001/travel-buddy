@@ -1,10 +1,13 @@
 <?php
 session_start();
 include '../config/db.php'; // From public/api/ to root config/
+include '../api/notifications.php'; // Include notifications helper
 
 // Ensure user is logged in
 if (!isset($_SESSION['user']['id'])) {
-    die("Not authorized");
+    setNotification("Not authorized.", "error");
+    header("Location: /travel-buddy/public/pages/dashboard.php");
+    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,16 +23,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validate inputs
     $valid_gender_preferences = ['male', 'female', 'other', 'any'];
     if (!in_array($gender_preference, $valid_gender_preferences)) {
-        throw new Exception("Invalid gender preference");
+        setNotification("Invalid gender preference.", "error");
+        header("Location: /travel-buddy/public/pages/create_trip.php");
+        exit;
     }
     if (empty($destination) || empty($travel_date) || empty($ending_date) || $budget <= 0) {
-        throw new Exception("Missing or invalid required fields");
+        setNotification("Missing or invalid required fields.", "error");
+        header("Location: /travel-buddy/public/pages/create_trip.php");
+        exit;
     }
     // Validate that ending_date is after travel_date
     $travelDate = new DateTime($travel_date);
     $endingDate = new DateTime($ending_date);
     if ($endingDate <= $travelDate) {
-        throw new Exception("Ending date must be after travel date");
+        setNotification("Ending date must be after travel date.", "error");
+        header("Location: /travel-buddy/public/pages/create_trip.php");
+        exit;
     }
 
     // Debugging
@@ -47,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 ':destination' => $destination,
                 ':travel_date' => $travel_date,
-                ':ending_date' => $ending_date, // New binding
+                ':ending_date' => $ending_date,
                 ':budget' => $budget,
                 ':gender_preference' => $gender_preference,
                 ':created_by' => $created_by
@@ -74,17 +83,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
         error_log("Trip created successfully for user $created_by (type: $trip_type)");
-        header("Location: ../public/pages/dashboard.php?section=my-trips&success=trip_created");
+        setNotification("Trip created successfully!", "success");
+        header("Location: /travel-buddy/public/pages/dashboard.php?section=my-trips");
         exit;
     } catch (Exception $e) {
         $pdo->rollBack();
         error_log("Database error in trips.php: " . $e->getMessage());
-        header("Location: ../public/pages/create_trip.php?error=" . urlencode($e->getMessage()));
+        setNotification("Failed to create trip: " . $e->getMessage(), "error");
+        header("Location: /travel-buddy/public/pages/create_trip.php");
         exit;
     }
 } else {
     // If not POST, redirect back
-    header("Location: ../public/pages/create_trip.php");
+    header("Location: /travel-buddy/public/pages/create_trip.php");
     exit;
 }
 ?>
