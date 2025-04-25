@@ -6,9 +6,9 @@ if (!isset($_SESSION['user']['id'])) {
     header("Location: /travel-buddy/public/pages/login.php");
     exit;
 }
-
+include '../../api/notifications.php';
 include '../../api/dashboard.php';
-
+$notification = getNotification();
 $user_id = $_SESSION['user']['id'];
 
 // Determine active section based on URL parameter or default to 'my-trips'
@@ -68,12 +68,10 @@ include '../includes/navbar.php';
             outline: none;
             transition: border-color 0.3s ease;
         }
-
         .search-bar input[type="date"] {
             margin-left: 10px;
             width: 200px;
         }
-
         .search-bar input:focus {
             border-color: #ffaa00;
         }
@@ -142,6 +140,30 @@ include '../includes/navbar.php';
         .dynamic-table tbody tr:hover {
             background: rgba(255, 255, 255, 0.07);
         }
+
+        /* Notification Styles */
+        .notification {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
     </style>
 </head>
 <body>
@@ -152,32 +174,20 @@ include '../includes/navbar.php';
         <div class="search-bar">
             <input type="text" id="searchInput" placeholder="Search by location..." onkeyup="filterTables()">
             <input type="date" id="searchDate" onchange="filterTables()">
-            <!-- <input type="date" id="endDateFilter" placeholder="End Date" onchange="filterTables()"> -->
         </div>
 
+        <!-- Display Notification -->
+        <?php if ($notification): ?>
+            <div class="notification <?php echo htmlspecialchars($notification['type']); ?>">
+                <?php echo htmlspecialchars($notification['message']); ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- API Error Message -->
         <?php if ($error_message): ?>
-            <p class="error-message"><?php echo htmlspecialchars($error_message); ?></p>
-        <?php elseif (isset($_GET['error'])): ?>
-            <p class="error-message">
-                <?php
-                $error = $_GET['error'];
-                $error_messages = [
-                    'invalid_trip_type' => 'Invalid trip type.',
-                    'already_requested' => 'You have already requested to join this trip.',
-                    'join_failed' => 'Failed to join the trip. Please try again.',
-                    'invalid_trip' => 'Invalid trip ID.',
-                    'unauthorized_action' => 'You are not authorized to perform this action.',
-                    'update_failed' => 'Failed to update the request. Please try again.',
-                    'solo_trip_limit_exceeded' => 'Cannot approve more than one member for a solo trip.',
-                    'gender_mismatch' => 'Your gender does not match the trip\'s preference.',
-                    'delete_failed' => 'Failed to delete the trip. Ensure you are the creator and the trip hasn\'t started.',
-                    'trip_started' => 'Cannot delete a trip that has already started.'
-                ];
-                echo htmlspecialchars($error_messages[$error] ?? 'An unknown error occurred.');
-                ?>
-            </p>
-        <?php elseif (isset($_GET['success'])): ?>
-            <p class="success-message" id="successMessage"><?php echo htmlspecialchars("Trip deleted successfully!"); ?></p>
+            <div class="notification error">
+                <?php echo htmlspecialchars($error_message); ?>
+            </div>
         <?php endif; ?>
 
         <!-- Tab Navigation -->
@@ -337,7 +347,7 @@ include '../includes/navbar.php';
             'Trip Destination': 'destination',
             'Travel Date': 'travel_date',
             'Ending Date': 'ending_date',
-            'Requester': 'requester_name', // Maps to requester_name, but we'll handle email separately in display
+            'Requester': 'requester_name',
             'Requested At': 'joined_at',
             'Action': 'request_id'
         };
@@ -373,19 +383,15 @@ include '../includes/navbar.php';
                 return destinationMatch && startDateMatch && endDateMatch;
             };
 
-            // Filter My Trips
             let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
             populateTable('myTripsTable', myTripsData, myTripsColumns);
 
-            // Filter Joined Trips
             let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
             populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
-            // Filter Joinable Trips
             let joinableTripsData = joinableTrips.filter(filterTrip);
             populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
 
-            // Filter Pending Requests
             let pendingRequestsData = pendingRequests.filter((request) => {
                 const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
                 const startDateMatch = !startDateInput || new Date(request.travel_date) >= new Date(startDateInput);
@@ -394,17 +400,19 @@ include '../includes/navbar.php';
             });
             populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
 
-            // Filter Previous Trips
             let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip);
             populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
         }
 
-        const successMessage = document.getElementById('successMessage');
-        if (successMessage) {
-            setTimeout(() => {
-                successMessage.style.display = 'none';
-            }, 3000);
-        }
+        // Auto-hide notification after 5 seconds
+        document.addEventListener('DOMContentLoaded', () => {
+            const notification = document.querySelector('.notification');
+            if (notification) {
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 5000);
+            }
+        });
     </script>
 </body>
 </html>
