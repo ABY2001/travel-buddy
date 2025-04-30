@@ -143,26 +143,29 @@ include '../includes/navbar.php';
 
         /* Notification Styles */
         .notification {
-            padding: 10px;
-            margin: 10px 0;
+            width: fit-content; 
+            padding: 10px 20px;
+            margin: 10px auto;
             border-radius: 5px;
-            font-weight: bold;
+            border-width: 900;
+            font-weight: 900;
             text-align: center;
+            display: block;
         }
         .success {
-            background-color: #d4edda;
+            
             color: #155724;
-            border: 1px solid #c3e6cb;
+            border: 2px solid  #155724 ;
         }
         .error {
-            background-color: #f8d7da;
+            
             color: #721c24;
-            border: 1px solid #f5c6cb;
+            border: 1px solid  #721c24;
         }
         .warning {
-            background-color: #fff3cd;
+           
             color: #856404;
-            border: 1px solid #ffeeba;
+            border: 1px solid #856404;
         }
     </style>
 </head>
@@ -370,41 +373,42 @@ include '../includes/navbar.php';
         populateTable('pendingRequestsTable', pendingRequests, pendingRequestsColumns);
         populateTable('previousTripsTable', allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')), previousTripsColumns);
 
-        // Frontend search function
+        // Frontend search functionś
         function filterTables() {
-            const locationInput = document.getElementById('searchInput').value.toLowerCase();
-            const startDateInput = document.getElementById('searchDate').value;
-            const endDateInput = document.getElementById('endDateFilter')?.value;
-            const maxBudget = parseFloat(document.getElementById('budgetFilter').value);
+        const locationInput = document.getElementById('searchInput').value.toLowerCase();
+        const startDateInput = document.getElementById('searchDate').value;
+        const endDateInput = document.getElementById('endDateFilter')?.value;
+        const maxBudget = parseFloat(document.getElementById('budgetFilter')?.value);
 
-            const filterTrip = (trip) => {
-                const destinationMatch = trip.destination && trip.destination.toLowerCase().includes(locationInput);
-                const startDateMatch = !startDateInput || new Date(trip.travel_date) <= new Date(startDateInput);
-                const endDateMatch = !endDateInput || (trip.ending_date && new Date(trip.ending_date) <= new Date(endDateInput));
-                const budgetMatch = isNaN(maxBudget) || (trip.budget !== undefined && parseFloat(trip.budget) <= maxBudget);
-                return destinationMatch && startDateMatch && budgetMatch ;
-            };
+        const filterTrip = (trip) => {
+            const destinationMatch = !locationInput || (trip.destination && trip.destination.toLowerCase().includes(locationInput));
+            const startDateMatch = !startDateInput || new Date(trip.travel_date) >= new Date(startDateInput);
+            const endDateMatch = !endDateInput || (trip.ending_date && new Date(trip.ending_date) <= new Date(endDateInput));
+            const budgetMatch = isNaN(maxBudget) || (trip.budget !== undefined && parseFloat(trip.budget) <= maxBudget);
+            return destinationMatch && startDateMatch && endDateMatch && budgetMatch;
+        };
 
-            let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
-            populateTable('myTripsTable', myTripsData, myTripsColumns);
+        let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
+        populateTable('myTripsTable', myTripsData, myTripsColumns);
 
-            let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
-            populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
+        let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
+        populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
-            let joinableTripsData = joinableTrips.filter(filterTrip);
-            populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
+        let joinableTripsData = joinableTrips.filter(filterTrip);
+        populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
 
-            let pendingRequestsData = pendingRequests.filter((request) => {
-                const destinationMatch = request.destination && request.destination.toLowerCase().includes(locationInput);
-                const startDateMatch = !startDateInput || new Date(request.travel_date) <= new Date(startDateInput);
-                const endDateMatch = !endDateInput || (request.ending_date && new Date(request.ending_date) <= new Date(endDateInput));
-                return destinationMatch && startDateMatch && budgetMatch;
-            });
-            populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
+        let pendingRequestsData = pendingRequests.filter((request) => {
+            const destinationMatch = !locationInput || (request.destination && request.destination.toLowerCase().includes(locationInput));
+            const startDateMatch = !startDateInput || new Date(request.travel_date) >= new Date(startDateInput);
+            const endDateMatch = !endDateInput || (request.ending_date && new Date(request.ending_date) <= new Date(endDateInput));
+            const budgetMatch = isNaN(maxBudget) || (request.budget !== undefined && parseFloat(request.budget) <= maxBudget);
+            return destinationMatch && startDateMatch && endDateMatch && budgetMatch;
+        });
+        populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
 
-            let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip);
-            populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
-        }
+        let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip);
+        populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
+}
 
         // Auto-hide notification after 5 seconds
         document.addEventListener('DOMContentLoaded', () => {
