@@ -53,7 +53,7 @@ include '../includes/navbar.php';
     <style>
         /* Search Bar */
         .search-bar {
-            display: flex;
+            display: flex;           
             justify-content: center;
             margin-bottom: 20px;
         }
@@ -72,6 +72,12 @@ include '../includes/navbar.php';
             margin-left: 10px;
             width: 200px;
         }
+
+        .search-bar input[type="number"]{
+           width: 200px;
+           margin-left: 10px;
+        }
+
         .search-bar input:focus {
             border-color: #ffaa00;
         }
@@ -177,6 +183,7 @@ include '../includes/navbar.php';
         <div class="search-bar">
             <input type="text" id="searchInput" placeholder="Search by location..." onkeyup="filterTables()">
             <input type="date" id="searchDate" onchange="filterTables()">
+            <input type="number" id="budgetFilter"  placeholder="Max Budget" onkeyup="filterTables()">
         </div>
 
         <!-- Display Notification -->
@@ -408,6 +415,8 @@ include '../includes/navbar.php';
 
         let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip);
         populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
+
+        
 }
 
         // Auto-hide notification after 5 seconds
