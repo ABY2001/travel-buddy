@@ -1,5 +1,5 @@
 <?php
-// File: /api/dashboard.php
+// File: /travel-buddy/api/dashboard.php
 require_once __DIR__ . '/../config/db.php'; // Ensure this is included first
 
 if (!isset($pdo) || $pdo === null) {
@@ -57,8 +57,11 @@ function fetchJoinableTrips($user_id) {
         $user_gender = $user['gender'] ?? 'any';
 
         $stmt = $pdo->prepare("
-            SELECT st.*, IF(st.ending_date < :current_date AND st.ending_date IS NOT NULL, 'completed', COALESCE(st.status, 'active')) AS status
+            SELECT st.*, 
+                   IF(st.ending_date < :current_date AND st.ending_date IS NOT NULL, 'completed', COALESCE(st.status, 'active')) AS status,
+                   u.name AS creator_name, u.email AS creator_email
             FROM solo_trips st
+            LEFT JOIN users u ON st.created_by = u.id
             WHERE st.created_by != :user_id
             AND st.id NOT IN (
                 SELECT trip_id FROM trip_members WHERE user_id = :user_id AND status IN ('pending', 'approved')

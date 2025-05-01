@@ -1,5 +1,5 @@
 <?php
-// File: /public/pages/dashboard.php
+// File: /travel-buddy/public/pages/dashboard.php
 session_start();
 error_log("Dashboard loaded at " . date('Y-m-d H:i:s') . " with user_id: " . ($_SESSION['user']['id'] ?? 'not set'));
 if (!isset($_SESSION['user']['id'])) {
@@ -159,19 +159,44 @@ include '../includes/navbar.php';
             display: block;
         }
         .success {
-            
             color: #155724;
-            border: 2px solid  #155724 ;
+            border: 2px solid #155724;
         }
         .error {
-            
             color: #721c24;
-            border: 1px solid  #721c24;
+            border: 1px solid #721c24;
         }
         .warning {
-           
             color: #856404;
             border: 1px solid #856404;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .permanent-warning {
+            color: #856404;
+            border: 1px solid #856404;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Creator Tag */
+        .creator-tag {
+            color: #ffaa00;
+            font-size: 12px;
+        }
+
+        /* Join Button */
+        .join-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            background-color: #ffcc00;
+            color: #333;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+        .join-btn:hover {
+            background-color: #ffaa00;
         }
     </style>
 </head>
@@ -183,7 +208,7 @@ include '../includes/navbar.php';
         <div class="search-bar">
             <input type="text" id="searchInput" placeholder="Search by location..." onkeyup="filterTables()">
             <input type="date" id="searchDate" onchange="filterTables()">
-            <input type="number" id="budgetFilter"  placeholder="Max Budget" onkeyup="filterTables()">
+            <input type="number" id="budgetFilter" placeholder="Max Budget" onkeyup="filterTables()">
         </div>
 
         <!-- Display Notification -->
@@ -218,9 +243,15 @@ include '../includes/navbar.php';
         </div>
         <div class="tab-content <?php echo $active_section === 'joinable-trips' ? 'active' : ''; ?>" id="joinable-trips">
             <table class="dynamic-table" id="joinableTripsTable"></table>
+            <div class="notification permanent-warning">
+                ⚠️ Please consider contacting the trip creator before sending a join request to ensure compatibility.
+            </div>
         </div>
         <div class="tab-content <?php echo $active_section === 'pending-requests' ? 'active' : ''; ?>" id="pending-requests">
             <table class="dynamic-table" id="pendingRequestsTable"></table>
+            <div class="notification permanent-warning">
+                ⚠️ Please consider contacting the requester before accepting their join request to ensure compatibility.
+            </div>
         </div>
         <div class="tab-content <?php echo $active_section === 'previous-trips' ? 'active' : ''; ?>" id="previous-trips">
             <table class="dynamic-table" id="previousTripsTable"></table>
@@ -292,6 +323,8 @@ include '../includes/navbar.php';
                         td.appendChild(membersDiv);
                     } else if (header === 'Creator') {
                         td.innerHTML = `<span class="creator-tag">Creator: ${item[key + '_name'] || 'Unknown'} (${item[key + '_email'] || 'No email'})</span>`;
+                    } else if (header === 'Created By') {
+                        td.innerHTML = `<span class="creator-tag">${item['creator_name'] || 'Unknown'} (${item['creator_email'] || 'No email'})</span>`;
                     } else if (header === 'Requester') {
                         td.innerHTML = `${item[key] || 'Unknown'}<br><span style="color: #ffaa00; font-size: 12px;">(${item['requester_email'] || 'No email'})</span>`;
                     } else if (header === 'Action' && tableId === 'joinableTripsTable' && item.id) {
@@ -349,6 +382,7 @@ include '../includes/navbar.php';
             'Ending Date': 'ending_date',
             'Budget': 'budget',
             'Gender Preference': 'gender_preference',
+            'Created By': 'creator_name', // Added "Created By" column
             'Created At': 'created_at',
             'Status': 'status',
             'Action': 'id'
@@ -380,53 +414,51 @@ include '../includes/navbar.php';
         populateTable('pendingRequestsTable', pendingRequests, pendingRequestsColumns);
         populateTable('previousTripsTable', allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')), previousTripsColumns);
 
-        // Frontend search functionś
+        // Frontend search function
         function filterTables() {
-        const locationInput = document.getElementById('searchInput').value.toLowerCase();
-        const startDateInput = document.getElementById('searchDate').value;
-        const endDateInput = document.getElementById('endDateFilter')?.value;
-        const maxBudget = parseFloat(document.getElementById('budgetFilter')?.value);
+            const locationInput = document.getElementById('searchInput').value.toLowerCase();
+            const startDateInput = document.getElementById('searchDate').value;
+            const endDateInput = document.getElementById('endDateFilter')?.value;
+            const maxBudget = parseFloat(document.getElementById('budgetFilter')?.value);
 
-        const filterTrip = (trip) => {
-            const destinationMatch = !locationInput || (trip.destination && trip.destination.toLowerCase().includes(locationInput));
-            const startDateMatch = !startDateInput || new Date(trip.travel_date) >= new Date(startDateInput);
-            const endDateMatch = !endDateInput || (trip.ending_date && new Date(trip.ending_date) <= new Date(endDateInput));
-            const budgetMatch = isNaN(maxBudget) || (trip.budget !== undefined && parseFloat(trip.budget) <= maxBudget);
-            return destinationMatch && startDateMatch && endDateMatch && budgetMatch;
-        };
+            const filterTrip = (trip) => {
+                const destinationMatch = !locationInput || (trip.destination && trip.destination.toLowerCase().includes(locationInput));
+                const startDateMatch = !startDateInput || new Date(trip.travel_date) >= new Date(startDateInput);
+                const endDateMatch = !endDateInput || (trip.ending_date && new Date(trip.ending_date) <= new Date(endDateInput));
+                const budgetMatch = isNaN(maxBudget) || (trip.budget !== undefined && parseFloat(trip.budget) <= maxBudget);
+                return destinationMatch && startDateMatch && endDateMatch && budgetMatch;
+            };
 
-        let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
-        populateTable('myTripsTable', myTripsData, myTripsColumns);
+            let myTripsData = allTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
+            populateTable('myTripsTable', myTripsData, myTripsColumns);
 
-        let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
-        populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
+            let joinedTripsData = joinedTrips.filter(trip => new Date(trip.ending_date) >= new Date('2025-04-13')).filter(filterTrip);
+            populateTable('joinedTripsTable', joinedTripsData, joinedTripsColumns);
 
-        let joinableTripsData = joinableTrips.filter(filterTrip);
-        populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
+            let joinableTripsData = joinableTrips.filter(filterTrip);
+            populateTable('joinableTripsTable', joinableTripsData, joinableTripsColumns);
 
-        let pendingRequestsData = pendingRequests.filter((request) => {
-            const destinationMatch = !locationInput || (request.destination && request.destination.toLowerCase().includes(locationInput));
-            const startDateMatch = !startDateInput || new Date(request.travel_date) >= new Date(startDateInput);
-            const endDateMatch = !endDateInput || (request.ending_date && new Date(request.ending_date) <= new Date(endDateInput));
-            const budgetMatch = isNaN(maxBudget) || (request.budget !== undefined && parseFloat(request.budget) <= maxBudget);
-            return destinationMatch && startDateMatch && endDateMatch && budgetMatch;
-        });
-        populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
+            let pendingRequestsData = pendingRequests.filter((request) => {
+                const destinationMatch = !locationInput || (request.destination && request.destination.toLowerCase().includes(locationInput));
+                const startDateMatch = !startDateInput || new Date(request.travel_date) >= new Date(startDateInput);
+                const endDateMatch = !endDateInput || (request.ending_date && new Date(request.ending_date) <= new Date(endDateInput));
+                const budgetMatch = isNaN(maxBudget) || (request.budget !== undefined && parseFloat(request.budget) <= maxBudget);
+                return destinationMatch && startDateMatch && endDateMatch && budgetMatch;
+            });
+            populateTable('pendingRequestsTable', pendingRequestsData, pendingRequestsColumns);
 
-        let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip);
-        populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
+            let previousTripsData = allTrips.filter(trip => new Date(trip.ending_date) < new Date('2025-04-13')).filter(filterTrip);
+            populateTable('previousTripsTable', previousTripsData, previousTripsColumns);
+        }
 
-        
-}
-
-        // Auto-hide notification after 5 seconds
+        // Auto-hide temporary notifications after 5 seconds, exclude permanent warnings
         document.addEventListener('DOMContentLoaded', () => {
-            const notification = document.querySelector('.notification');
-            if (notification) {
+            const notifications = document.querySelectorAll('.notification:not(.permanent-warning)');
+            notifications.forEach(notification => {
                 setTimeout(() => {
                     notification.style.display = 'none';
                 }, 5000);
-            }
+            });
         });
     </script>
 </body>
